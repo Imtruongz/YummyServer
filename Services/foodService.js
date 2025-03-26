@@ -39,7 +39,7 @@ export const getDetailFoodService = async (foodId) => {
 
     // Truy vấn thông tin người dùng dựa trên userId
     const user = await User.findOne({ userId: food.userId }).select(
-      "username email phoneNumber avatar"
+      "username email avatar"
     );
 
     if (!user) throw new Error("User not found");

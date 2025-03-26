@@ -9,18 +9,11 @@ export const registerUserService = async ({
   username,
   email,
   password,
-  phoneNumber,
 }) => {
   // Kiểm tra trùng email
   const existingUserByEmail = await User.findOne({ email });
   if (existingUserByEmail) {
     throw new Error("Email đã được sử dụng");
-  }
-
-  // Kiểm tra trùng số điện thoại
-  const existingUserByPhone = await User.findOne({ phoneNumber });
-  if (existingUserByPhone) {
-    throw new Error("Số điện thoại đã được sử dụng");
   }
 
   // Tiến hành mã hóa mật khẩu và tạo người dùng mới
@@ -29,7 +22,6 @@ export const registerUserService = async ({
     username,
     email,
     passwordHash,
-    phoneNumber,
   });
 
   await newUser.save();

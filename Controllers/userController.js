@@ -14,23 +14,19 @@ export const registerUser = async (req, res) => {
     return res.status(400).json({ message: "Dữ liệu gửi lên không hợp lệ" });
   }
 
-  const { username, email, password, phoneNumber } = req.body;
+  const { username, email, password } = req.body;
 
   try {
     const result = await registerUserService({
       username,
       email,
       password,
-      phoneNumber,
     });
     res
       .status(201)
       .json({ message: "Đăng ký thành công", userId: result.userId });
   } catch (err) {
     if (err.message === "Email đã được sử dụng") {
-      return res.status(400).json({ message: err.message });
-    }
-    if (err.message === "Số điện thoại đã được sử dụng") {
       return res.status(400).json({ message: err.message });
     }
 

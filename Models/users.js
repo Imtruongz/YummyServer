@@ -22,11 +22,6 @@ const userSchema = new Schema({
     required: true,
     select: false,
   },
-  phoneNumber: {
-    type: String,
-    required: true,
-    unique: true,
-  },
   avatar: {
     type: String,
   },
