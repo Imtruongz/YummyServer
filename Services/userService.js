@@ -146,3 +146,38 @@ export const getUserByEmailService = async (email) => {
     throw new Error("Lỗi khi truy vấn dữ liệu: " + error.message);
   }
 };
+
+export const loginWithFacebookService = async ({ facebookId, username, email, avatar }) => {
+  // Tìm hoặc tạo người dùng mới dựa vào facebookId
+  let user = await User.findOne({ facebookId });
+  if (!user && email) {
+    // Kiểm tra nếu email đã tồn tại
+    user = await User.findOne({ email });
+  }
+  
+  if (!user) {
+    // Tạo người dùng mới
+    user = new User({
+      username,
+      email,
+      facebookId,
+      avatar,
+      passwordHash: await bcrypt.hash(Math.random().toString(36), 10) // Mật khẩu ngẫu nhiên
+    });
+    await user.save();
+  } else if (!user.facebookId) {
+    // Cập nhật facebookId nếu người dùng đã tồn tại
+    user.facebookId = facebookId;
+    await user.save();
+  }
+  
+  // Tạo token
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  
+  return {
+    user,
+    accessToken,
+    refreshToken
+  };
+};

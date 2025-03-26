@@ -7,7 +7,10 @@ import {
   getUserByEmailService,
   changePasswordService,
   getAllUsersService,
+  loginWithFacebookService
 } from "../Services/userService.js";
+
+import { User } from "../Models/users.js";
 
 export const registerUser = async (req, res) => {
   if (!req.body) {
@@ -140,5 +143,29 @@ export const getUserByEmail = async (req, res) => {
   } catch (err) {
     console.error("Lỗi khi lấy thông tin user:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
+  }
+};
+
+// Đăng nhập bằng Facebook
+export const loginWithFacebook = async (req, res) => {
+  const { userId, username, email, avatar } = req.body;
+
+  try {
+    const result = await loginWithFacebookService({ 
+      facebookId: userId, 
+      username, 
+      email, 
+      avatar 
+    });
+    
+    res.json({
+      message: "Đăng nhập thành công",
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    });
+  } catch (err) {
+    console.error("Lỗi khi đăng nhập bằng Facebook:", err);
+    res.status(400).json({ message: err.message });
   }
 };

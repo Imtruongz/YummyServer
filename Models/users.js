@@ -14,7 +14,7 @@ const userSchema = new Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: false,
     unique: true,
   },
   passwordHash: {
@@ -35,6 +35,11 @@ const userSchema = new Schema({
   updatedAt: {
     type: Date,
     default: Date.now,
+  },
+  facebookId: {
+    type: String,
+    unique: true,
+    sparse: true
   },
 });
 
