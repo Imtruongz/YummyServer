@@ -1,8 +1,12 @@
+
 import express from 'express';
-import {registerUser, loginUser, updateUser, deleteUser, getAllUser, getUserById, getUserByEmail, changePassword, loginWithFacebook} from '../Controllers/userController.js'
+import {registerUser, loginUser, updateUser, deleteUser, getAllUser, getUserById, getUserByEmail, changePassword, loginWithFacebook, updateFcmToken} from '../Controllers/userController.js'
 import { authenticateToken } from '../Config/jwtConfig.js';
 
 const UserRouter = express.Router();
+
+// API cập nhật FCM token cho user
+UserRouter.patch('/update-fcm-token', authenticateToken, updateFcmToken)
 
 
 //Done

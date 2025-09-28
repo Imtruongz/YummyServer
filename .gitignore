@@ -34,3 +34,5 @@ bower_components/
 # MacOS and Windows file
 .DS_Store
 Thumbs.db
+
+service-account.json

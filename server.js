@@ -18,6 +18,7 @@ import categoriesRouter from "./Routers/categoriesRouter.js";
 import favoriteFoodsRouter from "./Routers/favoriteFoodsRouter.js";
 import foodReviewsRouter from "./Routers/foodReviewsRouter.js";
 import followRouter from "./Routers/followRouter.js";
+import NotificationRouter from "./Routers/notificationsRouter.js";
 
 const app = express();
 dotenv.config({
@@ -44,6 +45,7 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/favoriteFoods", favoriteFoodsRouter);
 app.use("/api/foodReviews", foodReviewsRouter);
 app.use("/api/follow", followRouter);
+app.use("/api/notifications", NotificationRouter);
 
 //Listen to all IP addresse
 const server = http.createServer(app);

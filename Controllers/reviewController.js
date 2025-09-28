@@ -1,9 +1,13 @@
+
 import {
   addCommentToFoodService,
   getAllCommentsFromFoodIdService,
   deleteCommentService,
   getCommentService,
 } from "../Services/reviewService.js";
+import { Food } from '../Models/foods.js';
+import { User } from '../Models/users.js';
+import { sendPushNotification } from '../utils/sendPushNotification.js';
 
 export const addCommentToFood = async (req, res) => {
   const { foodId, userId, reviewText } = req.body;
@@ -22,6 +26,20 @@ export const addCommentToFood = async (req, res) => {
       userId,
       reviewText,
     });
+
+    // Lấy thông tin chủ món ăn
+    const food = await Food.findOne({ foodId });
+    if (food && food.userId !== userId) { // Không gửi thông báo nếu tự comment món mình
+      const owner = await User.findOne({ userId: food.userId });
+      if (owner && owner.fcmToken) {
+        // Gửi push notification qua FCM
+        await sendPushNotification(
+          owner.fcmToken,
+          'Bạn có bình luận mới!',
+          `Có người vừa bình luận: "${reviewText}" vào món ăn của bạn.`
+        );
+      }
+    }
 
     res.status(201).json({
       message: "Comment added successfully.",

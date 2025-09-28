@@ -28,6 +28,10 @@ const userSchema = new Schema({
   description: {
     type: String,
   },
+  fcmToken: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,
