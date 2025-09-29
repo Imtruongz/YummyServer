@@ -8,6 +8,7 @@ import {
 import { Food } from '../Models/foods.js';
 import { User } from '../Models/users.js';
 import { sendPushNotification } from '../utils/sendPushNotification.js';
+import { Notification } from '../Models/notification.js';
 
 export const addCommentToFood = async (req, res) => {
   const { foodId, userId, reviewText } = req.body;
@@ -33,11 +34,17 @@ export const addCommentToFood = async (req, res) => {
       const owner = await User.findOne({ userId: food.userId });
       if (owner && owner.fcmToken) {
         // Gửi push notification qua FCM
-        await sendPushNotification(
-          owner.fcmToken,
-          'Bạn có bình luận mới!',
-          `Có người vừa bình luận: "${reviewText}" vào món ăn của bạn.`
-        );
+        const title = 'Bạn có bình luận mới!';
+        const body = `Có người vừa bình luận: "${reviewText}" vào món ăn của bạn.`;
+        await sendPushNotification(owner.fcmToken, title, body);
+        // Lưu lịch sử thông báo vào DB
+        await Notification.create({
+          userId: owner.userId,
+          actorId: userId, // người comment
+          title,
+          body,
+          type: 'comment',
+        });
       }
     }
 
