@@ -23,28 +23,40 @@ const paymentSessions = {
  */
 export const createPaymentSession = (req, res) => {
   try {
-    const { amount, description, merchantName } = req.body;
+    // Bỏ qua dữ liệu từ req.body và sử dụng dữ liệu fix cứng
     
-    if (!amount) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Thiếu thông tin số tiền thanh toán" 
-      });
-    }
-
     // Tạo token duy nhất bằng timestamp và số ngẫu nhiên
     const token = `${Math.floor(Math.random() * 100000)}`;
     
-    // Lưu thông tin vào database giả lập
+    // Lưu thông tin vào database giả lập với dữ liệu fix cứng
     paymentSessions[token] = {
-      amount: parseFloat(amount),
-      description: description || "Thanh toán từ ứng dụng YummyApp",
-      merchantName: merchantName || "YummyApp",
-      merchantId: "YUMMY001",
-      currency: "LAK",
-      orderId: `ORDER_${Date.now()}`,
-      createdAt: new Date(),
-      status: "pending"
+      bankName: "Military Commercial Joint Stock Bank - Laos branch",
+      accountNumber: "100000427769",
+      transactionAmount: 10000,
+      bankCode: "MB",
+      save: true,
+      dataBank: {
+        beneficiaryId: 2603,
+        customerId: 21321,
+        beneficiaryCustomerName: "HOANG NAM TIEN",
+        customerAccNumber: "100000123042",
+        beneficiaryAccountNumber: "100000427769",
+        beneficiaryBankCode: "MB",
+        beneficiaryBankName: "Military Commercial Joint Stock Bank - Laos branch",
+        beneficiaryBankId: 8,
+        reminiscentName: "HOANG NAM TIEN",
+        status: 1,
+        type: "INTERNAL_BANK",
+        icon: {
+          id: 8845,
+          name: "unnamed.png",
+          path: "8845/unnamed-2024-11-19.png",
+          normalizeName: "unnamed-2024-11-19.png",
+          classPk: 8
+        },
+        transferTransactionId: 21991,
+        savedAccount: 1
+      }
     };
     
     return res.status(200).json({
