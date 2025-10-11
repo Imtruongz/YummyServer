@@ -21,41 +21,65 @@ const paymentSessions = {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export const createPaymentSession = (req, res) => {
+export const createPaymentSession = async (req, res) => {
   try {
-    // Bỏ qua dữ liệu từ req.body và sử dụng dữ liệu fix cứng
+    // Lấy userId từ JWT token nếu có (người gửi)
+    const userId = req.user ? req.user.userId : null;
+    
+    // Lấy thông tin từ request body
+    const { amount = 10000, description = "Thanh toán từ YummyApp", merchantName = "YummyFood", receiverId } = req.body;
     
     // Tạo token duy nhất bằng timestamp và số ngẫu nhiên
-    const token = `${Math.floor(Math.random() * 100000)}`;
+    const token = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     
-    // Lưu thông tin vào database giả lập với dữ liệu fix cứng
-    paymentSessions[token] = {
+    // Thông tin tài khoản ngân hàng mặc định nếu không tìm thấy tài khoản người nhận
+    let bankInfo = {
       bankName: "Military Commercial Joint Stock Bank - Laos branch",
       accountNumber: "100000427769",
-      transactionAmount: 10000,
       bankCode: "MB",
+      accountName: "HOANG NAM TIEN"
+    };
+    
+    try {
+      // Import service để lấy thông tin tài khoản ngân hàng
+      const bankAccountService = await import('../Services/bankAccountService.js');
+      
+      // Nếu có receiverId, ưu tiên lấy tài khoản của người nhận donate
+      if (receiverId) {
+        const receiverBankAccount = await bankAccountService.getBankAccount(receiverId);
+        
+        if (receiverBankAccount) {
+          console.log(`Đã tìm thấy tài khoản ngân hàng của người nhận: ${receiverId}`);
+          bankInfo = {
+            bankName: receiverBankAccount.bankName,
+            accountNumber: receiverBankAccount.accountNumber,
+            bankCode: receiverBankAccount.bankCode,
+            accountName: receiverBankAccount.accountName
+          };
+        } else {
+          console.log(`Không tìm thấy tài khoản ngân hàng của người nhận: ${receiverId}, sử dụng thông tin mặc định`);
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin tài khoản ngân hàng:", error);
+      // Tiếp tục sử dụng thông tin mặc định nếu có lỗi
+    }
+    
+    // Lưu thông tin vào database giả lập với dữ liệu từ bankInfo
+    paymentSessions[token] = {
+      bankName: bankInfo.bankName,
+      accountNumber: bankInfo.accountNumber,
+      transactionAmount: amount,
+      bankCode: bankInfo.bankCode,
       save: true,
       dataBank: {
-        beneficiaryId: 2603,
-        customerId: 21321,
-        beneficiaryCustomerName: "HOANG NAM TIEN",
-        customerAccNumber: "100000123042",
-        beneficiaryAccountNumber: "100000427769",
-        beneficiaryBankCode: "MB",
-        beneficiaryBankName: "Military Commercial Joint Stock Bank - Laos branch",
-        beneficiaryBankId: 8,
-        reminiscentName: "HOANG NAM TIEN",
+        beneficiaryCustomerName: bankInfo.accountName,
+        customerAccNumber: "100000123042", // Số tài khoản người gửi (fix cứng do không có trong database)
+        beneficiaryAccountNumber: bankInfo.accountNumber,
+        beneficiaryBankCode: bankInfo.bankCode,
+        beneficiaryBankName: bankInfo.bankName,
         status: 1,
-        type: "INTERNAL_BANK",
-        icon: {
-          id: 8845,
-          name: "unnamed.png",
-          path: "8845/unnamed-2024-11-19.png",
-          normalizeName: "unnamed-2024-11-19.png",
-          classPk: 8
-        },
-        transferTransactionId: 21991,
-        savedAccount: 1
+        type: "INTERNAL_BANK"
       }
     };
     

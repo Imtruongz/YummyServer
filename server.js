@@ -20,6 +20,7 @@ import foodReviewsRouter from "./Routers/foodReviewsRouter.js";
 import followRouter from "./Routers/followRouter.js";
 import NotificationRouter from "./Routers/notificationsRouter.js";
 import paymentRouter from "./Routers/paymentRouter.js";
+import bankAccountRouter from "./Routers/bankAccountRouter.js";
 
 const app = express();
 dotenv.config({
@@ -48,6 +49,7 @@ app.use("/api/foodReviews", foodReviewsRouter);
 app.use("/api/follow", followRouter);
 app.use("/api/notifications", NotificationRouter);
 app.use("/api/payment", paymentRouter);
+app.use("/api/bank-accounts", bankAccountRouter);
 
 //Listen to all IP addresse
 const server = http.createServer(app);
