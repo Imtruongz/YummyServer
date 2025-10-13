@@ -1,6 +1,45 @@
 import * as bankAccountService from '../Services/bankAccountService.js';
 
 /**
+ * Lấy tài khoản ngân hàng của người dùng khác theo userId
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getUserBankAccount = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "UserId không hợp lệ"
+      });
+    }
+    
+    const bankAccount = await bankAccountService.getBankAccount(userId);
+    
+    if (!bankAccount) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy thông tin tài khoản ngân hàng của người dùng này"
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      data: bankAccount,
+      exists: true
+    });
+  } catch (error) {
+    console.error('Error getting user bank account:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi server, không thể lấy thông tin tài khoản ngân hàng"
+    });
+  }
+};
+
+/**
  * Lấy tài khoản ngân hàng của người dùng
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
