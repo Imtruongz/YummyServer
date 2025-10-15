@@ -18,7 +18,7 @@ export const addCategory = async (req, res) => {
       .status(201)
       .json({ message: "Thêm danh mục thành công", category: newCategory });
   } catch (err) {
-    console.error("Lỗi khi thêm danh mục:", err);
+    console.log("Lỗi khi thêm danh mục:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
@@ -28,7 +28,7 @@ export const getAllCategories = async (req, res) => {
     const categories = await getAllCategoriesService();
     res.status(200).json(categories);
   } catch (err) {
-    console.error("Lỗi khi lấy danh sách danh mục:", err);
+    console.log("Lỗi khi lấy danh sách danh mục:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };

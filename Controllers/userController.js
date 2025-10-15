@@ -55,7 +55,7 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: err.message });
     }
 
-    console.error("Lỗi khi đăng ký người dùng:", err);
+    console.log("Lỗi khi đăng ký người dùng:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
@@ -73,7 +73,7 @@ export const loginUser = async (req, res) => {
       user: result.user,
     });
   } catch (err) {
-    console.error("Lỗi khi đăng nhập:", err);
+    console.log("Lỗi khi đăng nhập:", err);
     res.status(400).json({ message: err.message });
   }
 };
@@ -89,7 +89,7 @@ export const updateUser = async (req, res) => {
     });
     res.json({ message: "Cập nhật thành công", updatedUser });
   } catch (err) {
-    console.error("Lỗi khi cập nhật thông tin:", err);
+    console.log("Lỗi khi cập nhật thông tin:", err);
     res.status(404).json({ message: err.message });
   }
 };
@@ -106,7 +106,7 @@ export const changePassword = async (req, res) => {
     );
     res.json(result);
   } catch (err) {
-    console.error("Lỗi khi đổi mật khẩu:", err);
+    console.log("Lỗi khi đổi mật khẩu:", err);
     res.status(404).json({ message: err.message });
   }
 };
@@ -118,7 +118,7 @@ export const deleteUser = async (req, res) => {
     const result = await deleteUserService(userId);
     res.json(result);
   } catch (err) {
-    console.error("Lỗi khi xóa tài khoản:", err);
+    console.log("Lỗi khi xóa tài khoản:", err);
     res.status(404).json({ message: err.message });
   }
 };
@@ -133,7 +133,7 @@ export const getAllUser = async (req, res) => {
     }
     res.json(users);
   } catch (err) {
-    console.error("Lỗi khi lấy danh sách người dùng:", err);
+    console.log("Lỗi khi lấy danh sách người dùng:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
@@ -148,7 +148,7 @@ export const getUserById = async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    console.error("Lỗi khi lấy thông tin user:", err);
+    console.log("Lỗi khi lấy thông tin user:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
@@ -163,7 +163,7 @@ export const getUserByEmail = async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    console.error("Lỗi khi lấy thông tin user:", err);
+    console.log("Lỗi khi lấy thông tin user:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
@@ -187,7 +187,7 @@ export const loginWithFacebook = async (req, res) => {
       user: result.user,
     });
   } catch (err) {
-    console.error("Lỗi khi đăng nhập bằng Facebook:", err);
+    console.log("Lỗi khi đăng nhập bằng Facebook:", err);
     res.status(400).json({ message: err.message });
   }
 };

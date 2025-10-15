@@ -123,7 +123,7 @@ export const getAllUsersService = async (currentUserId) => {
 
     return users; // Trả về danh sách người dùng
   } catch (error) {
-    console.error(
+    console.log(
       "Lỗi khi truy vấn danh sách người dùng trong service:",
       error
     );

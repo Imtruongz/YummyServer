@@ -31,7 +31,7 @@ export const getUserBankAccount = async (req, res) => {
       exists: true
     });
   } catch (error) {
-    console.error('Error getting user bank account:', error);
+    console.log('Error getting user bank account:', error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể lấy thông tin tài khoản ngân hàng"
@@ -56,7 +56,7 @@ export const getBankAccount = async (req, res) => {
       exists: bankAccount !== null
     });
   } catch (error) {
-    console.error('Error getting bank account:', error);
+    console.log('Error getting bank account:', error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể lấy thông tin tài khoản ngân hàng"
@@ -95,7 +95,7 @@ export const saveBankAccount = async (req, res) => {
       message: "Lưu tài khoản ngân hàng thành công"
     });
   } catch (error) {
-    console.error('Error saving bank account:', error);
+    console.log('Error saving bank account:', error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể lưu tài khoản ngân hàng"
@@ -135,7 +135,7 @@ export const deleteBankAccount = async (req, res) => {
       message: "Cập nhật tài khoản ngân hàng thành công"
     });
   } catch (error) {
-    console.error('Error updating bank account:', error);
+    console.log('Error updating bank account:', error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể cập nhật tài khoản ngân hàng"
@@ -165,7 +165,7 @@ export const setDefaultBankAccount = async (req, res) => {
       message: "Xóa tài khoản ngân hàng thành công"
     });
   } catch (error) {
-    console.error('Error deleting bank account:', error);
+    console.log('Error deleting bank account:', error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể xóa tài khoản ngân hàng"

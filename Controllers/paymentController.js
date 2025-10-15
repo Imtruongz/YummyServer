@@ -61,7 +61,7 @@ export const createPaymentSession = async (req, res) => {
         }
       }
     } catch (error) {
-      console.error("Lỗi khi lấy thông tin tài khoản ngân hàng:", error);
+      console.log("Lỗi khi lấy thông tin tài khoản ngân hàng:", error);
       // Tiếp tục sử dụng thông tin mặc định nếu có lỗi
     }
     
@@ -89,7 +89,7 @@ export const createPaymentSession = async (req, res) => {
       message: "Tạo phiên thanh toán thành công"
     });
   } catch (error) {
-    console.error("Lỗi tạo phiên thanh toán:", error);
+    console.log("Lỗi tạo phiên thanh toán:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể tạo phiên thanh toán"
@@ -139,7 +139,7 @@ export const getOrderInfo = (req, res) => {
     });
     
   } catch (error) {
-    console.error("Lỗi lấy thông tin đơn hàng:", error);
+    console.log("Lỗi lấy thông tin đơn hàng:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể lấy thông tin đơn hàng"
@@ -182,7 +182,7 @@ export const updatePaymentStatus = (req, res) => {
     });
     
   } catch (error) {
-    console.error("Lỗi cập nhật trạng thái thanh toán:", error);
+    console.log("Lỗi cập nhật trạng thái thanh toán:", error);
     return res.status(500).json({
       success: false,
       message: "Lỗi server, không thể cập nhật trạng thái thanh toán"
