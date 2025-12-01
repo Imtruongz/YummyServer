@@ -1,5 +1,6 @@
 import { Food } from "../Models/foods.js";
 import { User } from "../Models/users.js";
+import { FoodRating } from "../Models/foodRatings.js";
 
 // export const getAllFoodService = async () => {
 //   try {
@@ -44,10 +45,29 @@ export const getDetailFoodService = async (foodId) => {
 
     if (!user) throw new Error("User not found");
 
-    // Kết hợp thông tin món ăn và user trước khi trả về
+    // Tính trung bình rating của food
+    const ratingStats = await FoodRating.aggregate([
+      { $match: { foodId: foodId } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+          totalRatings: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating = ratingStats.length > 0
+      ? Math.round(ratingStats[0].averageRating * 10) / 10
+      : 0;
+    const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
+    // Kết hợp thông tin món ăn, user và rating trước khi trả về
     return {
       ...food.toObject(),
       userDetail: user.toObject(),
+      averageRating,
+      totalRatings,
     };
   } catch (error) {
     throw new Error(error.message);
