@@ -46,7 +46,7 @@ export const answerCookingQuestion = async (question) => {
                 { role: "user", content: question }
             ],
             temperature: 0.7,
-            max_tokens: 500
+            max_tokens: 2000
         });
 
         return response.choices[0].message.content;
