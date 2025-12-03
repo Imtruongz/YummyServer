@@ -24,7 +24,7 @@ export const suggestRecipe = async (req, res) => {
 
 export const askCookingQuestion = async (req, res) => {
     try {
-        const { question } = req.body;
+        const { question, conversationHistory = [] } = req.body;
         
         if (!question || typeof question !== 'string') {
             return res.status(400).json({ 
@@ -33,7 +33,7 @@ export const askCookingQuestion = async (req, res) => {
             });
         }
 
-        const answer = await answerCookingQuestion(question);
+        const answer = await answerCookingQuestion(question, conversationHistory);
         res.json({ success: true, answer });
     } catch (error) {
         console.error('Error in askCookingQuestion:', error);

@@ -34,17 +34,21 @@ export const generateRecipeSuggestion = async (ingredients) => {
     }
 };
 
-export const answerCookingQuestion = async (question) => {
+export const answerCookingQuestion = async (question, conversationHistory = []) => {
     try {
+        // Build messages array with conversation history
+        const messages = [
+            { 
+                role: "system", 
+                content: "You are a professional chef assistant, expert in cooking techniques and food knowledge. Use the conversation history to understand the context of follow-up questions." 
+            },
+            ...conversationHistory,
+            { role: "user", content: question }
+        ];
+
         const response = await openai.chat.completions.create({
             model: OPENAI_MODEL,
-            messages: [
-                { 
-                    role: "system", 
-                    content: "You are a professional chef assistant, expert in cooking techniques and food knowledge." 
-                },
-                { role: "user", content: question }
-            ],
+            messages: messages,
             temperature: 0.7,
             max_tokens: 2000
         });
