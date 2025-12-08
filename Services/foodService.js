@@ -1,6 +1,7 @@
 import { Food } from "../Models/foods.js";
 import { User } from "../Models/users.js";
 import { FoodRating } from "../Models/foodRatings.js";
+import { Category } from "../Models/categories.js";
 
 // export const getAllFoodService = async () => {
 //   try {
@@ -19,9 +20,29 @@ export const getAllFoodService = async () => {
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
+        
+        // Tính trung bình rating
+        const ratingStats = await FoodRating.aggregate([
+          { $match: { foodId: food.foodId } },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: "$rating" },
+              totalRatings: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const averageRating = ratingStats.length > 0
+          ? Math.round(ratingStats[0].averageRating * 10) / 10
+          : 0;
+        const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
         return { 
           ...food.toObject(), 
-          userDetail: user ? user.toObject() : {}
+          userDetail: user ? user.toObject() : {},
+          averageRating,
+          totalRatings,
         };
       })
     );
@@ -45,6 +66,11 @@ export const getDetailFoodService = async (foodId) => {
 
     if (!user) throw new Error("User not found");
 
+    // Truy vấn thông tin loại danh mục dựa trên categoryId
+    const category = await Category.findOne({ categoryId: food.categoryId }).select(
+      "categoryId categoryName"
+    );
+
     // Tính trung bình rating của food
     const ratingStats = await FoodRating.aggregate([
       { $match: { foodId: foodId } },
@@ -62,10 +88,11 @@ export const getDetailFoodService = async (foodId) => {
       : 0;
     const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
 
-    // Kết hợp thông tin món ăn, user và rating trước khi trả về
+    // Kết hợp thông tin món ăn, user, category và rating trước khi trả về
     return {
       ...food.toObject(),
       userDetail: user.toObject(),
+      categoryDetail: category ? category.toObject() : null,
       averageRating,
       totalRatings,
     };
@@ -78,7 +105,38 @@ export const getDetailFoodService = async (foodId) => {
 export const getFoodByCategoryService = async (categoryId) => {
   try {
     const foods = await Food.find({ categoryId: categoryId });
-    return foods; // return
+    const fullFoods = await Promise.all(
+      foods.map(async (food) => {
+        const user = await User.findOne({ userId: food.userId }).select(
+          "username avatar"
+        );
+        
+        // Tính trung bình rating
+        const ratingStats = await FoodRating.aggregate([
+          { $match: { foodId: food.foodId } },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: "$rating" },
+              totalRatings: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const averageRating = ratingStats.length > 0
+          ? Math.round(ratingStats[0].averageRating * 10) / 10
+          : 0;
+        const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
+        return {
+          ...food.toObject(),
+          userDetail: user ? user.toObject() : {},
+          averageRating,
+          totalRatings,
+        };
+      })
+    );
+    return fullFoods;
   } catch (error) {
     throw new Error(error.message);
   }
@@ -87,7 +145,38 @@ export const getFoodByCategoryService = async (categoryId) => {
 export const getFoodByUserIdService = async (userId) => {
   try {
     const foods = await Food.find({ userId: userId });
-    return foods;
+    const fullFoods = await Promise.all(
+      foods.map(async (food) => {
+        const user = await User.findOne({ userId: food.userId }).select(
+          "username avatar"
+        );
+        
+        // Tính trung bình rating
+        const ratingStats = await FoodRating.aggregate([
+          { $match: { foodId: food.foodId } },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: "$rating" },
+              totalRatings: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const averageRating = ratingStats.length > 0
+          ? Math.round(ratingStats[0].averageRating * 10) / 10
+          : 0;
+        const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
+        return {
+          ...food.toObject(),
+          userDetail: user ? user.toObject() : {},
+          averageRating,
+          totalRatings,
+        };
+      })
+    );
+    return fullFoods;
   } catch (error) {
     throw new Error(error.message);
   }
