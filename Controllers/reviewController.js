@@ -31,20 +31,25 @@ export const addCommentToFood = async (req, res) => {
     // Lấy thông tin chủ món ăn
     const food = await Food.findOne({ foodId });
     if (food && food.userId !== userId) { // Không gửi thông báo nếu tự comment món mình
-      const owner = await User.findOne({ userId: food.userId });
-      if (owner && owner.fcmToken) {
-        // Gửi push notification qua FCM
-        const title = 'Bạn có bình luận mới!';
-        const body = `Có người vừa bình luận: "${reviewText}" vào món ăn của bạn.`;
-        await sendPushNotification(owner.fcmToken, title, body);
-        // Lưu lịch sử thông báo vào DB
-        await Notification.create({
-          userId: owner.userId,
-          actorId: userId, // người comment
-          title,
-          body,
-          type: 'comment',
-        });
+      try {
+        const owner = await User.findOne({ userId: food.userId });
+        if (owner && owner.fcmToken) {
+          // Gửi push notification qua FCM
+          const title = 'Bạn có bình luận mới!';
+          const body = `Có người vừa bình luận: "${reviewText}" vào món ăn của bạn.`;
+          await sendPushNotification(owner.fcmToken, title, body);
+          // Lưu lịch sử thông báo vào DB
+          await Notification.create({
+            userId: owner.userId,
+            actorId: userId, // người comment
+            title,
+            body,
+            type: 'comment',
+          });
+        }
+      } catch (notificationError) {
+        // Log lỗi notification nhưng không fail response
+        console.error('Notification error:', notificationError.message);
       }
     }
 
