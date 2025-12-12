@@ -12,8 +12,21 @@ const paymentSessions = {
     currency: "LAK",
     orderId: "ORDER_TEST_123",
     createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 phút
     status: "pending"
   }
+};
+
+// Token expiration time (15 minutes in milliseconds)
+const TOKEN_EXPIRATION_TIME = 15 * 60 * 1000;
+
+/**
+ * Kiểm tra token có hết hạn không
+ */
+const isTokenExpired = (token) => {
+  const session = paymentSessions[token];
+  if (!session) return true;
+  return new Date() > session.expiresAt;
 };
 
 /**
@@ -66,15 +79,37 @@ export const createPaymentSession = async (req, res) => {
     }
     
     // Lưu thông tin vào database giả lập với dữ liệu từ bankInfo
+    const expiresAt = new Date(Date.now() + TOKEN_EXPIRATION_TIME);
     paymentSessions[token] = {
+      // ✨ Metadata
+      token,
+      senderId: userId,
+      receiverId,
+      merchantName,
+      merchantId: "YUMMY001",
+      orderId: `YM-${Date.now()}`,
+      
+      // ✨ Thông tin thanh toán
+      amount,
+      transactionAmount: amount,
+      description,
+      currency: "LAK",
+      
+      // ✨ Thông tin tài khoản
       bankName: bankInfo.bankName,
       accountNumber: bankInfo.accountNumber,
-      transactionAmount: amount,
       bankCode: bankInfo.bankCode,
-      save: true,
+      accountName: bankInfo.accountName,
+      
+      // ✨ Trạng thái & thời gian
+      status: "pending",
+      createdAt: new Date(),
+      expiresAt: expiresAt,
+      
+      // ✨ Data cho MBLaos
       dataBank: {
         beneficiaryCustomerName: bankInfo.accountName,
-        customerAccNumber: "100000123042", // Số tài khoản người gửi (fix cứng do không có trong database)
+        customerAccNumber: "100000123042",
         beneficiaryAccountNumber: bankInfo.accountNumber,
         beneficiaryBankCode: bankInfo.bankCode,
         beneficiaryBankName: bankInfo.bankName,
@@ -82,6 +117,8 @@ export const createPaymentSession = async (req, res) => {
         type: "INTERNAL_BANK"
       }
     };
+    
+    console.log(`✅ Tạo phiên thanh toán thành công - Token: ${token}`);
     
     return res.status(200).json({
       success: true,
@@ -98,18 +135,18 @@ export const createPaymentSession = async (req, res) => {
 };
 
 /**
- * Lấy thông tin đơn hàng từ token
+ * ✨ Lấy thông tin phiên thanh toán từ token (MBLaos sẽ gọi endpoint này)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export const getOrderInfo = (req, res) => {
+export const getPaymentSession = (req, res) => {
   try {
     const { token } = req.query;
     
-    // Log yêu cầu và danh sách token hiện có
-    console.log(`📝 GET /api/payment/order-info với token: ${token}`);
+    console.log(`📝 GET /api/payment/get-session với token: ${token}`);
     console.log(`🔑 Danh sách token hiện có: ${Object.keys(paymentSessions).join(', ')}`);
     
+    // Kiểm tra token có được cung cấp không
     if (!token) {
       console.log('❌ Yêu cầu thiếu token');
       return res.status(400).json({ 
@@ -129,42 +166,77 @@ export const getOrderInfo = (req, res) => {
       });
     }
     
-    console.log(`✅ Tìm thấy thông tin thanh toán cho token: ${token}`);
-    console.log(paymentInfo);
+    // Kiểm tra token có hết hạn không
+    if (isTokenExpired(token)) {
+      console.log(`❌ Token đã hết hạn: ${token}`);
+      return res.status(400).json({
+        success: false,
+        message: "Token thanh toán đã hết hạn"
+      });
+    }
     
-    // Trả về thông tin đơn hàng
+    console.log(`✅ Tìm thấy thông tin thanh toán cho token: ${token}`);
+    
+    // Trả về thông tin phiên thanh toán cho MBLaos
     return res.status(200).json({
       success: true,
-      data: paymentInfo
+      data: {
+        token,
+        amount: paymentInfo.amount,
+        description: paymentInfo.description,
+        merchantName: paymentInfo.merchantName,
+        merchantId: paymentInfo.merchantId,
+        orderId: paymentInfo.orderId,
+        currency: paymentInfo.currency,
+        
+        // ✨ Thông tin tài khoản nhận tiền
+        bankName: paymentInfo.bankName,
+        accountNumber: paymentInfo.accountNumber,
+        accountName: paymentInfo.accountName,
+        bankCode: paymentInfo.bankCode,
+        
+        // ✨ Timestamp
+        createdAt: paymentInfo.createdAt,
+        expiresAt: paymentInfo.expiresAt
+      }
     });
     
   } catch (error) {
-    console.log("Lỗi lấy thông tin đơn hàng:", error);
+    console.log("Lỗi lấy thông tin phiên thanh toán:", error);
     return res.status(500).json({
       success: false,
-      message: "Lỗi server, không thể lấy thông tin đơn hàng"
+      message: "Lỗi server, không thể lấy thông tin phiên thanh toán"
     });
   }
 };
 
 /**
- * Cập nhật trạng thái thanh toán
+ * ✨ Keep getOrderInfo để backward compatibility
+ */
+export const getOrderInfo = getPaymentSession;
+
+/**
+ * ✨ Nhận callback từ MBLaos sau khi xử lý thanh toán
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export const updatePaymentStatus = (req, res) => {
+export const paymentCallback = (req, res) => {
   try {
-    const { token, status } = req.body;
+    const { token, status, transactionId, errorMessage } = req.body;
     
-    if (!token || !status) {
+    console.log(`📥 Nhận callback từ MBLaos - Token: ${token}, Status: ${status}`);
+    
+    // Kiểm tra token có được cung cấp không
+    if (!token) {
       return res.status(400).json({ 
         success: false, 
-        message: "Thiếu token hoặc trạng thái thanh toán" 
+        message: "Thiếu token thanh toán" 
       });
     }
     
     // Kiểm tra token có tồn tại không
     if (!paymentSessions[token]) {
+      console.log(`❌ Không tìm thấy phiên thanh toán cho token: ${token}`);
       return res.status(404).json({
         success: false,
         message: "Không tìm thấy phiên thanh toán với token này"
@@ -172,20 +244,41 @@ export const updatePaymentStatus = (req, res) => {
     }
     
     // Cập nhật trạng thái
-    paymentSessions[token].status = status;
-    paymentSessions[token].updatedAt = new Date();
+    const session = paymentSessions[token];
+    session.status = status; // 'success', 'failed', 'cancelled', 'pending'
+    session.transactionId = transactionId;
+    session.errorMessage = errorMessage;
+    session.completedAt = new Date();
+    
+    // ✨ Tạo callback URL để MBLaos mở lại Yummy app
+    const callbackUrl = `yummy://payment-result?token=${token}&status=${status}&transactionId=${transactionId || ''}`;
+    
+    console.log(`✅ Cập nhật phiên thanh toán thành công - Status: ${status}`);
+    console.log(`📱 Callback URL để mở lại Yummy: ${callbackUrl}`);
+    
+    // Có thể thêm logic gọi database, send notification, v.v ở đây
     
     return res.status(200).json({
       success: true,
-      message: "Cập nhật trạng thái thanh toán thành công",
-      data: paymentSessions[token]
+      message: "Nhận callback thành công",
+      callbackUrl: callbackUrl,
+      data: {
+        token,
+        status,
+        transactionId
+      }
     });
     
   } catch (error) {
-    console.log("Lỗi cập nhật trạng thái thanh toán:", error);
+    console.log("Lỗi xử lý callback thanh toán:", error);
     return res.status(500).json({
       success: false,
-      message: "Lỗi server, không thể cập nhật trạng thái thanh toán"
+      message: "Lỗi server, không thể xử lý callback"
     });
   }
 };
+
+/**
+ * ✨ Keep updatePaymentStatus để backward compatibility
+ */
+export const updatePaymentStatus = paymentCallback;
