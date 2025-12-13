@@ -12,9 +12,18 @@ import { Category } from "../Models/categories.js";
 //   }
 // };
 
-export const getAllFoodService = async () => {
+export const getAllFoodService = async (page = 1, limit = 10) => {
   try {
-    const foods = await Food.find(); // Lấy tất cả món ăn
+    const skip = (page - 1) * limit;
+    
+    // Lấy tổng số lượng food
+    const total = await Food.countDocuments();
+    
+    // Lấy food với pagination
+    const foods = await Food.find()
+      .skip(skip)
+      .limit(limit);
+    
     const fullFoods = await Promise.all(
       foods.map(async (food) => {
         const user = await User.findOne({ userId: food.userId }).select(
@@ -46,7 +55,17 @@ export const getAllFoodService = async () => {
         };
       })
     );
-    return fullFoods;
+    
+    return {
+      data: fullFoods,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+      }
+    };
   } catch (error) {
     throw new Error(error.message);
   }

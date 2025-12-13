@@ -19,8 +19,11 @@ import {
 
 export const getAllFood = async (req, res) => {
   try {
-    const foods = await getAllFoodService();
-    res.json(foods);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await getAllFoodService(page, limit);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
