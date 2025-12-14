@@ -5,7 +5,8 @@ import {
   addFoodService,
   deleteFoodService,
   updateFoodService,
-  getFoodByUserIdService
+  getFoodByUserIdService,
+  searchFoodService
 } from "../Services/foodService.js";
 
 // export const getAllFood = async (req, res) => {
@@ -23,6 +24,19 @@ export const getAllFood = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     const result = await getAllFoodService(page, limit);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const searchFood = async (req, res) => {
+  try {
+    const query = req.query.q || '';
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const result = await searchFoodService(query, page, limit);
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });

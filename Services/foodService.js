@@ -71,6 +71,76 @@ export const getAllFoodService = async (page = 1, limit = 10) => {
   }
 };
 
+export const searchFoodService = async (query = '', page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    // Tạo regex để search
+    const searchRegex = new RegExp(query, 'i');
+    
+    // Tìm foods khớp với query (foodName hoặc description)
+    const total = await Food.countDocuments({
+      $or: [
+        { foodName: searchRegex },
+        { foodDescription: searchRegex }
+      ]
+    });
+    
+    const foods = await Food.find({
+      $or: [
+        { foodName: searchRegex },
+        { foodDescription: searchRegex }
+      ]
+    })
+      .skip(skip)
+      .limit(limit);
+    
+    const fullFoods = await Promise.all(
+      foods.map(async (food) => {
+        const user = await User.findOne({ userId: food.userId }).select(
+          "username avatar"
+        );
+        
+        // Tính trung bình rating
+        const ratingStats = await FoodRating.aggregate([
+          { $match: { foodId: food.foodId } },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: "$rating" },
+              totalRatings: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const averageRating = ratingStats.length > 0
+          ? Math.round(ratingStats[0].averageRating * 10) / 10
+          : 0;
+        const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
+        return { 
+          ...food.toObject(), 
+          userDetail: user ? user.toObject() : {},
+          averageRating,
+          totalRatings,
+        };
+      })
+    );
+    
+    return {
+      data: fullFoods,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page < Math.ceil(total / limit),
+      }
+    };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
 
 export const getDetailFoodService = async (foodId) => {
   try {
