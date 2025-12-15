@@ -39,6 +39,13 @@ const foodSchema = new Schema({
   CookingTime: {
     type: String,
   },
+  difficultyLevel: {
+    type: String,
+    enum: ['easy', 'medium', 'hard'],
+  },
+  servings: {
+    type: Number,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
