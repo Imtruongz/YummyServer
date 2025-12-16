@@ -121,24 +121,31 @@ export const deleteFood = async (req, res) => {
 export const updateFood = async (req, res) => {
   const {
     foodId,
+    userId,
     foodName,
     categoryId,
     foodDescription,
     foodIngredients,
     foodThumbnail,
     foodSteps,
+    CookingTime,
   } = req.body;
   try {
-    const updatedFood = await updateFoodService(foodId, {
+    if (!foodId || !userId) {
+      return res.status(400).json({ message: 'foodId and userId are required.' });
+    }
+
+    const updatedFood = await updateFoodService(foodId, userId, {
       foodName,
       categoryId,
       foodDescription,
       foodIngredients,
       foodThumbnail,
       foodSteps,
+      CookingTime,
     });
     res.status(200).json(updatedFood);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(error.message.includes('only edit') ? 403 : 500).json({ message: error.message });
   }
 };

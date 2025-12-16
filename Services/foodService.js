@@ -289,20 +289,29 @@ export const deleteFoodService = async (foodId) => {
   }
 };
 
-export const updateFoodService = async (foodId, fooData) => {
-  const foodData = {
-    ...fooData,
-    updatedAt: new Date(),
-  };
+export const updateFoodService = async (foodId, userId, fooData) => {
   try {
+    // Check if food exists
+    const food = await Food.findOne({ foodId: foodId });
+    if (!food) {
+      throw new Error("Food not found");
+    }
+    
+    // Check ownership - only food owner can edit
+    if (food.userId !== userId) {
+      throw new Error("You can only edit your own food");
+    }
+
+    const foodData = {
+      ...fooData,
+      updatedAt: new Date(),
+    };
+
     const updateFood = await Food.findOneAndUpdate(
       { foodId: foodId },
       foodData,
       { new: true }
     );
-    if (!updateFood) {
-      throw new Error("Food not found");
-    }
     return updateFood;
   } catch (error) {
     throw new Error(error.message);
