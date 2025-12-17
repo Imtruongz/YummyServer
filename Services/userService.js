@@ -1,37 +1,69 @@
 import { User } from "../Models/users.js"; // Đảm bảo đường dẫn đúng
+import PendingUser from "../Models/pendingUser.js";
+import { EmailVerification } from "../Models/emailVerification.js";
 import bcrypt from "bcrypt";
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "../Config/jwtConfig.js";
+import {
+  sendVerificationEmail,
+  sendWelcomeEmail,
+} from "./emailService.js";
 
 export const registerUserService = async ({
   username,
   email,
   password,
+  fullName,
 }) => {
-  // Kiểm tra trùng email
+  console.log("🔧 [SERVICE] registerUserService started");
+  
+  // Kiểm tra trùng email trong User
+  console.log("🔍 Checking if email exists in User collection:", email);
   const existingUserByEmail = await User.findOne({ email });
   if (existingUserByEmail) {
+    console.log("⚠️ Email already exists in User collection");
     throw new Error("Email đã được sử dụng");
   }
 
-  // Tiến hành mã hóa mật khẩu và tạo người dùng mới
-  const passwordHash = await bcrypt.hash(password, 10);
-  const newUser = new User({
-    username,
-    email,
-    passwordHash,
-  });
+  // Kiểm tra trùng email trong PendingUser
+  console.log("🔍 Checking if email exists in PendingUser collection:", email);
+  const existingPendingUser = await PendingUser.findOne({ email });
+  if (existingPendingUser) {
+    console.log("⚠️ Email already exists in PendingUser collection");
+    throw new Error("Email này đang chờ xác thực. Vui lòng kiểm tra email.");
+  }
 
-  await newUser.save();
-  const accessToken = generateAccessToken(newUser);
-  const refreshToken = generateRefreshToken(newUser);
+  // ✅ Không lưu user vào DB, chỉ gửi email xác thực
+  console.log("✅ Email is unique, sending verification email only");
 
+  // Tạo verification code (6 digits)
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+  console.log("📧 Creating verification record with code:", verificationCode);
+  // Lưu verification record (sử dụng email làm identifier)
+  await EmailVerification.findOneAndUpdate(
+    { email: email.toLowerCase() },
+    {
+      email: email.toLowerCase(),
+      verificationCode,
+      expiresAt,
+      isUsed: false,
+      attempts: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  console.log("📨 Sending verification email to:", email);
+  // Gửi email verification
+  await sendVerificationEmail(email, verificationCode);
+
+  console.log("✅ Verification email sent - waiting for email verification");
   return {
-    userId: newUser._id, // Đảm bảo trả về _id đúng của mongoDB
-    accessToken,
-    refreshToken,
+    email,
+    message: "Verification email sent. Please check your email.",
   };
 };
 
@@ -39,6 +71,11 @@ export const loginUserService = async ({ email, password, rememberMe }) => {
   const user = await User.findOne({ email }).select("+passwordHash");
   if (!user) {
     throw new Error("Sai email hoặc mật khẩu");
+  }
+
+  // ← NEW: Kiểm tra email verification
+  if (!user.isEmailVerified) {
+    throw new Error("Email chưa được xác nhận. Vui lòng kiểm tra email của bạn.");
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -179,5 +216,115 @@ export const loginWithFacebookService = async ({ facebookId, username, email, av
     user,
     accessToken,
     refreshToken
+  };
+};
+
+// ← NEW: Verify email with code
+export const verifyEmailService = async (email, verificationCode, userData) => {
+  console.log("🔍 [VERIFY] Starting verification for email:", email);
+  console.log("🔍 [VERIFY] Code received (type:", typeof verificationCode, "):", verificationCode);
+  
+  // Tìm verification record
+  const verificationRecord = await EmailVerification.findOne({
+    email: email.toLowerCase(),
+    isUsed: false,
+  });
+
+  console.log("🔍 [VERIFY] Record found:", verificationRecord ? 'YES' : 'NO');
+  
+  if (!verificationRecord) {
+    throw new Error("Mã xác nhận không tồn tại hoặc đã hết hạn");
+  }
+
+  console.log("🔍 [VERIFY] DB Code (type:", typeof verificationRecord.verificationCode, "):", verificationRecord.verificationCode);
+  console.log("🔍 [VERIFY] Comparing:", verificationRecord.verificationCode, "===", verificationCode.toString());
+
+  // Kiểm tra mã hết hạn
+  if (new Date() > verificationRecord.expiresAt) {
+    throw new Error("Mã xác nhận đã hết hạn. Vui lòng yêu cầu mã mới.");
+  }
+
+  // Kiểm tra vượt quá số lần thử
+  if (verificationRecord.attempts >= (verificationRecord.maxAttempts || 5)) {
+    throw new Error("Đã vượt quá số lần thử. Vui lòng yêu cầu mã mới.");
+  }
+
+  // Kiểm tra mã xác nhận
+  if (verificationRecord.verificationCode !== verificationCode.toString()) {
+    console.log("❌ [VERIFY] Code mismatch!");
+    // Tăng số lần thử
+    verificationRecord.attempts += 1;
+    await verificationRecord.save();
+    throw new Error("Mã xác nhận không chính xác");
+  }
+
+  console.log("✅ [VERIFY] Code matched! Creating user from frontend data");
+
+  // ✅ Lấy form data từ frontend (userData) và tạo User
+  const { username, password } = userData;
+  
+  // Mã hóa mật khẩu
+  const passwordHash = await bcrypt.hash(password, 10);
+  
+  // Tạo real user
+  const newUser = new User({
+    username,
+    email: email.toLowerCase(),
+    passwordHash,
+    isEmailVerified: true,
+  });
+
+  await newUser.save();
+  console.log("✅ User created in User collection:", newUser.userId);
+
+  // Đánh dấu verification code đã sử dụng
+  verificationRecord.isUsed = true;
+  await verificationRecord.save();
+
+  // Gửi welcome email
+  await sendWelcomeEmail(email, username);
+
+  // Tạo tokens (nhưng không trả về - user phải login)
+  const accessToken = generateAccessToken(newUser);
+  const refreshToken = generateRefreshToken(newUser);
+
+  return {
+    user: newUser,
+    accessToken,
+    refreshToken,
+    message: "Email verified successfully!",
+  };
+};
+
+// ← NEW: Resend verification code
+export const resendVerificationEmailService = async (email) => {
+  // Tìm pending user
+  const pendingUser = await PendingUser.findOne({ email: email.toLowerCase() });
+  if (!pendingUser) {
+    throw new Error("Email không tồn tại hoặc đã được xác thực");
+  }
+
+  // Tạo verification code mới
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+  // Cập nhật verification record
+  await EmailVerification.findOneAndUpdate(
+    { email: email.toLowerCase() },
+    {
+      email: email.toLowerCase(),
+      verificationCode,
+      expiresAt,
+      isUsed: false,
+      attempts: 0,
+    },
+    { upsert: true, new: true }
+  );
+
+  // Gửi email
+  await sendVerificationEmail(email, verificationCode);
+
+  return {
+    message: "Verification email sent. Please check your email.",
   };
 };

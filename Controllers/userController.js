@@ -29,7 +29,9 @@ import {
   getUserByEmailService,
   changePasswordService,
   getAllUsersService,
-  loginWithFacebookService
+  loginWithFacebookService,
+  verifyEmailService,
+  resendVerificationEmailService
 } from "../Services/userService.js";
 
 import { User } from "../Models/users.js";
@@ -41,22 +43,38 @@ export const registerUser = async (req, res) => {
 
   const { username, email, password } = req.body;
 
+  console.log("📝 [REGISTER] Received registration request:");
+  console.log("   Username:", username);
+  console.log("   Email:", email);
+  console.log("   Password length:", password?.length || 0);
+
   try {
+    // ✅ Chỉ gửi email, không lưu user vào DB
     const result = await registerUserService({
       username,
       email,
       password,
     });
-    res
-      .status(201)
-      .json({ message: "Đăng ký thành công", userId: result.userId });
+    console.log("✅ [REGISTER] Verification email sent to:", email);
+    res.status(201).json({ 
+      message: result.message,
+      email: result.email
+    });
   } catch (err) {
-    if (err.message === "Email đã được sử dụng") {
+    if (err.message === "Email đã được sử dụng" || err.message.includes("đang chờ xác thực")) {
+      console.log("⚠️ [REGISTER] Email already exists or pending:", email);
       return res.status(400).json({ message: err.message });
     }
 
-    console.log("Lỗi khi đăng ký người dùng:", err);
-    res.status(500).json({ message: "Lỗi máy chủ" });
+    console.log("❌ [REGISTER] Error:", err.message);
+    console.error("Error details:", {
+      message: err.message,
+      stack: err.stack,
+    });
+    res.status(500).json({ 
+      message: "Lỗi máy chủ",
+      error: err.message 
+    });
   }
 };
 
@@ -188,6 +206,54 @@ export const loginWithFacebook = async (req, res) => {
     });
   } catch (err) {
     console.log("Lỗi khi đăng nhập bằng Facebook:", err);
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// ← NEW: Verify email with code
+export const verifyEmail = async (req, res) => {
+  const { email, verificationCode, userData } = req.body;
+
+  if (!email || !verificationCode) {
+    return res.status(400).json({ 
+      message: "Email và mã xác nhận là bắt buộc" 
+    });
+  }
+
+  if (!userData || !userData.username || !userData.password) {
+    return res.status(400).json({ 
+      message: "Form data (username, password) là bắt buộc" 
+    });
+  }
+
+  try {
+    // ✅ Gửi userData từ frontend
+    const result = await verifyEmailService(email, verificationCode, userData);
+    res.json({
+      message: result.message,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    });
+  } catch (err) {
+    console.log("Lỗi khi xác nhận email:", err);
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// ← NEW: Resend verification email
+export const resendVerificationEmail = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email là bắt buộc" });
+  }
+
+  try {
+    const result = await resendVerificationEmailService(email);
+    res.json(result);
+  } catch (err) {
+    console.log("Lỗi khi gửi lại mã xác nhận:", err);
     res.status(400).json({ message: err.message });
   }
 };

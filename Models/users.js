@@ -45,6 +45,18 @@ const userSchema = new Schema({
     unique: true,
     sparse: true
   },
+  isEmailVerified: {
+    type: Boolean,
+    default: false,
+  },
+  verificationToken: {
+    type: String,
+    select: false,
+  },
+  verificationExpires: {
+    type: Date,
+    select: false,
+  },
 });
 
 userSchema.methods.comparePassword = async function (password) {
