@@ -31,7 +31,9 @@ import {
   getAllUsersService,
   loginWithFacebookService,
   verifyEmailService,
-  resendVerificationEmailService
+  resendVerificationEmailService,
+  forgotPasswordService,
+  verifyCodeAndResetPasswordService,
 } from "../Services/userService.js";
 
 import { User } from "../Models/users.js";
@@ -220,21 +222,32 @@ export const verifyEmail = async (req, res) => {
     });
   }
 
-  if (!userData || !userData.username || !userData.password) {
+  // userData is optional (can be used for signup flow only)
+  if (userData && (!userData.username || !userData.password)) {
     return res.status(400).json({ 
-      message: "Form data (username, password) là bắt buộc" 
+      message: "Form data (username, password) không hợp lệ" 
     });
   }
 
   try {
-    // ✅ Gửi userData từ frontend
+    // ✅ If userData is provided, create user (signup flow)
+    // ✅ If userData is not provided, just verify code (forgot password flow)
     const result = await verifyEmailService(email, verificationCode, userData);
-    res.json({
-      message: result.message,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      user: result.user,
-    });
+    
+    if (userData) {
+      // Signup flow - return user + tokens
+      res.json({
+        message: result.message,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: result.user,
+      });
+    } else {
+      // Forgot password flow - just confirm code is valid
+      res.json({
+        message: result.message || "Verification code is valid",
+      });
+    }
   } catch (err) {
     console.log("Lỗi khi xác nhận email:", err);
     res.status(400).json({ message: err.message });
@@ -255,5 +268,61 @@ export const resendVerificationEmail = async (req, res) => {
   } catch (err) {
     console.log("Lỗi khi gửi lại mã xác nhận:", err);
     res.status(400).json({ message: err.message });
+  }
+};
+
+/**
+ * POST /users/forgot-password
+ * User nhập email để quên mật khẩu
+ */
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const result = await forgotPasswordService(email);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error in forgotPassword:", error);
+    res.status(400).json({ message: error.message });
+  }
+};
+
+/**
+ * POST /users/verify-reset-code
+ * User nhập code xác minh + password mới để reset password
+ */
+export const verifyResetCode = async (req, res) => {
+  try {
+    const { email, verificationCode, newPassword } = req.body;
+
+    // Validate input
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    if (!verificationCode) {
+      return res.status(400).json({ message: "Verification code is required" });
+    }
+    if (!newPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+    if (newPassword.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    const result = await verifyCodeAndResetPasswordService(
+      email,
+      verificationCode,
+      newPassword
+    );
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Error in verifyResetCode:", error);
+    res.status(400).json({ message: error.message });
   }
 };

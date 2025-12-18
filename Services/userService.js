@@ -223,6 +223,7 @@ export const loginWithFacebookService = async ({ facebookId, username, email, av
 export const verifyEmailService = async (email, verificationCode, userData) => {
   console.log("🔍 [VERIFY] Starting verification for email:", email);
   console.log("🔍 [VERIFY] Code received (type:", typeof verificationCode, "):", verificationCode);
+  console.log("🔍 [VERIFY] userData provided:", userData ? 'YES' : 'NO');
   
   // Tìm verification record
   const verificationRecord = await EmailVerification.findOne({
@@ -258,42 +259,56 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
     throw new Error("Mã xác nhận không chính xác");
   }
 
-  console.log("✅ [VERIFY] Code matched! Creating user from frontend data");
+  console.log("✅ [VERIFY] Code matched!");
 
-  // ✅ Lấy form data từ frontend (userData) và tạo User
-  const { username, password } = userData;
-  
-  // Mã hóa mật khẩu
-  const passwordHash = await bcrypt.hash(password, 10);
-  
-  // Tạo real user
-  const newUser = new User({
-    username,
-    email: email.toLowerCase(),
-    passwordHash,
-    isEmailVerified: true,
-  });
+  // ✅ If userData is provided, create user (signup flow)
+  if (userData) {
+    console.log("✅ [VERIFY] Creating user from frontend data (signup flow)");
+    const { username, password } = userData;
+    
+    // Mã hóa mật khẩu
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Tạo real user
+    const newUser = new User({
+      username,
+      email: email.toLowerCase(),
+      passwordHash,
+      isEmailVerified: true,
+    });
 
-  await newUser.save();
-  console.log("✅ User created in User collection:", newUser.userId);
+    await newUser.save();
+    console.log("✅ User created in User collection:", newUser.userId);
 
-  // Đánh dấu verification code đã sử dụng
-  verificationRecord.isUsed = true;
-  await verificationRecord.save();
+    // Đánh dấu verification code đã sử dụng
+    verificationRecord.isUsed = true;
+    await verificationRecord.save();
 
-  // Gửi welcome email
-  await sendWelcomeEmail(email, username);
+    // Gửi welcome email
+    await sendWelcomeEmail(email, username);
 
-  // Tạo tokens (nhưng không trả về - user phải login)
-  const accessToken = generateAccessToken(newUser);
-  const refreshToken = generateRefreshToken(newUser);
+    // Tạo tokens (nhưng không trả về - user phải login)
+    const accessToken = generateAccessToken(newUser);
+    const refreshToken = generateRefreshToken(newUser);
 
-  return {
-    user: newUser,
-    accessToken,
-    refreshToken,
-    message: "Email verified successfully!",
-  };
+    return {
+      user: newUser,
+      accessToken,
+      refreshToken,
+      message: "Email verified successfully!",
+    };
+  } else {
+    // ✅ If userData is not provided, just verify code (forgot password flow)
+    console.log("✅ [VERIFY] Verification code is valid (forgot password flow)");
+    
+    // Đánh dấu verification code đã sử dụng
+    verificationRecord.isUsed = true;
+    await verificationRecord.save();
+
+    return {
+      message: "Verification code is valid. You can now reset your password.",
+    };
+  }
 };
 
 // ← NEW: Resend verification code
@@ -326,5 +341,111 @@ export const resendVerificationEmailService = async (email) => {
 
   return {
     message: "Verification email sent. Please check your email.",
+  };
+};
+
+/**
+ * Service: Forgot Password - Step 1
+ * User nhập email → gửi verification code về email
+ */
+export const forgotPasswordService = async (email) => {
+  console.log("🔧 [SERVICE] forgotPasswordService started for:", email);
+
+  // Kiểm tra email tồn tại
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    console.log("⚠️ Email không tồn tại:", email);
+    // Return generic message cho security (không leak info)
+    return {
+      message: "If email exists, verification code will be sent.",
+      email: email,
+    };
+  }
+
+  console.log("✅ Email found, generating verification code");
+
+  // Tạo verification code (6 digits) - giống signup
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
+
+  // Lưu verification record (reuse EmailVerification collection)
+  // Sử dụng email làm identifier
+  await EmailVerification.findOneAndUpdate(
+    { email: email.toLowerCase() },
+    {
+      email: email.toLowerCase(),
+      verificationCode,
+      expiresAt,
+      createdAt: new Date(),
+    },
+    { upsert: true, new: true }
+  );
+
+  console.log("📧 Sending verification code to:", email);
+  // Gửi email với code
+  await sendVerificationEmail(email, verificationCode);
+
+  return {
+    message: "Verification code sent to your email.",
+    email: email,
+  };
+};
+
+/**
+ * Service: Verify Code & Reset Password - Step 2 & 3
+ * User nhập code + password mới → verify code + reset password
+ */
+export const verifyCodeAndResetPasswordService = async (
+  email,
+  verificationCode,
+  newPassword
+) => {
+  console.log("🔧 [SERVICE] verifyCodeAndResetPasswordService started");
+
+  // Kiểm tra email tồn tại
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    throw new Error("Email not found");
+  }
+
+  // Kiểm tra verification code
+  console.log("🔍 Checking verification code for:", email);
+  const verification = await EmailVerification.findOne({
+    email: email.toLowerCase(),
+  });
+
+  if (!verification) {
+    throw new Error("No verification code found for this email");
+  }
+
+  // Kiểm tra code có đúng không
+  if (verification.verificationCode !== verificationCode) {
+    console.log("❌ Verification code mismatch");
+    throw new Error("Invalid verification code");
+  }
+
+  // Kiểm tra code chưa hết hạn
+  if (new Date() > verification.expiresAt) {
+    console.log("⏰ Verification code expired");
+    throw new Error("Verification code has expired");
+  }
+
+  console.log("✅ Verification code valid, updating password");
+
+  // Hash password mới
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  // Update password
+  user.passwordHash = hashedPassword;
+  await user.save();
+
+  // Xóa verification record
+  await EmailVerification.deleteOne({ email: email.toLowerCase() });
+
+  console.log("✅ Password reset successfully");
+
+  return {
+    message: "Password reset successfully. Please login with your new password.",
+    email: user.email,
   };
 };
