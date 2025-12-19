@@ -78,19 +78,13 @@ export const searchFoodService = async (query = '', page = 1, limit = 10) => {
     // Tạo regex để search
     const searchRegex = new RegExp(query, 'i');
     
-    // Tìm foods khớp với query (foodName hoặc description)
+    // Tìm foods khớp với query (chỉ foodName)
     const total = await Food.countDocuments({
-      $or: [
-        { foodName: searchRegex },
-        { foodDescription: searchRegex }
-      ]
+      foodName: searchRegex
     });
     
     const foods = await Food.find({
-      $or: [
-        { foodName: searchRegex },
-        { foodDescription: searchRegex }
-      ]
+      foodName: searchRegex
     })
       .skip(skip)
       .limit(limit);
