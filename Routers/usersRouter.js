@@ -1,12 +1,9 @@
 
 import express from 'express';
-import {registerUser, loginUser, updateUser, deleteUser, getAllUser, getUserById, getUserByEmail, changePassword, loginWithFacebook, updateFcmToken, verifyEmail, resendVerificationEmail, forgotPassword, verifyResetCode} from '../Controllers/userController.js'
+import {registerUser, loginUser, updateUser, deleteUser, getAllUser, getUserById, getUserByEmail, changePassword, loginWithFacebook, verifyEmail, resendVerificationEmail, forgotPassword, verifyResetCode} from '../Controllers/userController.js'
 import { authenticateToken } from '../Config/jwtConfig.js';
 
 const UserRouter = express.Router();
-
-// API cập nhật FCM token cho user
-UserRouter.patch('/update-fcm-token', authenticateToken, updateFcmToken)
 
 // ← Email verification routes (signup)
 UserRouter.post('/verify-email', verifyEmail)

@@ -6,7 +6,6 @@ import {
 } from "../Services/ratingService.js";
 import { Food } from '../Models/foods.js';
 import { User } from '../Models/users.js';
-import { sendPushNotification } from '../utils/sendPushNotification.js';
 import { Notification } from '../Models/notification.js';
 
 // Thêm hoặc cập nhật rating
@@ -44,10 +43,9 @@ export const addOrUpdateRating = async (req, res) => {
       const food = await Food.findOne({ foodId });
       if (food && food.userId !== userId) {
         const owner = await User.findOne({ userId: food.userId });
-        if (owner && owner.fcmToken) {
+        if (owner) {
           const title = 'Bạn có đánh giá mới!';
           const body = `Có người vừa đánh giá ${rating} sao vào món ăn của bạn.`;
-          await sendPushNotification(owner.fcmToken, title, body);
           await Notification.create({
             userId: owner.userId,
             actorId: userId,
