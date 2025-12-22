@@ -66,3 +66,13 @@ export const getAllCommentsFromFoodIdService = async (foodId) => {
     throw new Error(error.message);
   }
 };
+
+export const getCommentCountService = async (foodId) => {
+  try {
+    const commentCount = await FoodReview.countDocuments({ foodId });
+    return commentCount;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+

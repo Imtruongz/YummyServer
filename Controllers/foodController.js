@@ -6,7 +6,8 @@ import {
   deleteFoodService,
   updateFoodService,
   getFoodByUserIdService,
-  searchFoodService
+  searchFoodService,
+  getFollowingFoodsService
 } from "../Services/foodService.js";
 
 // export const getAllFood = async (req, res) => {
@@ -79,23 +80,34 @@ export const getFoodByUserId = async (req, res) => {
 
 export const addFood = async (req, res) => {
   try {
-    const { foodName, categoryId, userId, foodDescription, foodIngredients, foodThumbnail, foodSteps, CookingTime } = req.body;
+    // ⭐ Lấy userId từ JWT token (source of truth)
+    const authenticatedUserId = req.user?.userId;
+    const { foodName, categoryId, foodDescription, foodIngredients, foodThumbnail, foodSteps, CookingTime, difficultyLevel, servings } = req.body;
 
-    if (!foodName || !categoryId || !userId || !Array.isArray(foodIngredients) || !Array.isArray(foodSteps)) {
+    // ⭐ Validate required fields (không check userId từ body, dùng token)
+    if (!foodName || !categoryId || !Array.isArray(foodIngredients) || !Array.isArray(foodSteps)) {
       return res.status(400).json({ message: 'Invalid or missing required fields.' });
+    }
+
+    if (!authenticatedUserId) {
+      console.log("🚫 [AUTH] No user ID in token");
+      return res.status(401).json({ message: 'Unauthorized: Invalid token. Please login again.' });
     }
 
     const newFoodData = {
       foodName,
       categoryId,
-      userId,
+      userId: authenticatedUserId, // ⭐ Always use authenticated user ID from token
       foodDescription,
       foodIngredients,
       foodThumbnail: foodThumbnail || '',
       foodSteps,
-      CookingTime
+      CookingTime,
+      difficultyLevel,
+      servings
     };
 
+    console.log("✅ [FOOD] Adding food for user:", authenticatedUserId);
     const newFood = await addFoodService(newFoodData);
 
     res.status(201).json({
@@ -103,7 +115,6 @@ export const addFood = async (req, res) => {
       data: newFood,
     });
   } catch (error) {
-    // Trả về lỗi nếu có exception
     res.status(500).json({ message: error.message || 'Internal Server Error' });
   }
 };
@@ -147,5 +158,22 @@ export const updateFood = async (req, res) => {
     res.status(200).json(updatedFood);
   } catch (error) {
     res.status(error.message.includes('only edit') ? 403 : 500).json({ message: error.message });
+  }
+};
+
+export const getFollowingFoods = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required' });
+    }
+    
+    const result = await getFollowingFoodsService(userId, page, limit);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };

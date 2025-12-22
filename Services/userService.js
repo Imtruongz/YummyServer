@@ -368,6 +368,13 @@ export const forgotPasswordService = async (email) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
 
+  // ⭐ LOG MÃ XÁC MINH RA CONSOLE (Development)
+  console.log(`\n🔐 ===== VERIFICATION CODE FOR RESET PASSWORD =====`);
+  console.log(`📧 Email: ${email}`);
+  console.log(`🔑 Code: ${verificationCode}`);
+  console.log(`⏱️  Expires in: 15 minutes`);
+  console.log(`====================================================\n`);
+
   // Lưu verification record (reuse EmailVerification collection)
   // Sử dụng email làm identifier
   await EmailVerification.findOneAndUpdate(
