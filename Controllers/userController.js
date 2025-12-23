@@ -23,6 +23,23 @@ export const registerUser = async (req, res) => {
 
   const { username, email, password } = req.body;
 
+  // Validate input
+  if (!username || !email || !password) {
+    return res.status(400).json({ message: "Username, email và mật khẩu không được để trống" });
+  }
+
+  if (typeof username !== 'string' || username.trim().length < 3) {
+    return res.status(400).json({ message: "Username phải có ít nhất 3 ký tự" });
+  }
+
+  if (typeof email !== 'string' || !email.includes('@')) {
+    return res.status(400).json({ message: "Email không hợp lệ" });
+  }
+
+  if (typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
+  }
+
   console.log("📝 [REGISTER] Received registration request:");
   console.log("   Username:", username);
   console.log("   Email:", email);
@@ -62,6 +79,19 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const { email, password, rememberMe } = req.body;
 
+  // Validate input
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email và mật khẩu không được để trống" });
+  }
+
+  if (typeof email !== 'string' || !email.includes('@')) {
+    return res.status(400).json({ message: "Email không hợp lệ" });
+  }
+
+  if (typeof password !== 'string' || password.length < 6) {
+    return res.status(400).json({ message: "Mật khẩu phải có ít nhất 6 ký tự" });
+  }
+
   try {
     const result = await loginUserService({ email, password, rememberMe });
     res.json({
@@ -69,6 +99,7 @@ export const loginUser = async (req, res) => {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       user: result.user,
+      warning: result.warning || undefined, // Return warning if email not verified
     });
   } catch (err) {
     console.log("Lỗi khi đăng nhập:", err);
@@ -77,7 +108,12 @@ export const loginUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-  const { userId, username, avatar, description } = req.body;
+  const { username, avatar, description } = req.body;
+  const userId = req.user?.userId; // Lấy userId từ JWT token
+
+  if (!userId) {
+    return res.status(401).json({ message: "Không tìm thấy thông tin người dùng" });
+  }
 
   try {
     const updatedUser = await updateUserService(userId, {

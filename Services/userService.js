@@ -1,5 +1,4 @@
 import { User } from "../Models/users.js"; // Đảm bảo đường dẫn đúng
-import PendingUser from "../Models/pendingUser.js";
 import { EmailVerification } from "../Models/emailVerification.js";
 import bcrypt from "bcrypt";
 import {
@@ -27,23 +26,29 @@ export const registerUserService = async ({
     throw new Error("Email đã được sử dụng");
   }
 
-  // Kiểm tra trùng email trong PendingUser
-  console.log("🔍 Checking if email exists in PendingUser collection:", email);
-  const existingPendingUser = await PendingUser.findOne({ email });
-  if (existingPendingUser) {
-    console.log("⚠️ Email already exists in PendingUser collection");
-    throw new Error("Email này đang chờ xác thực. Vui lòng kiểm tra email.");
-  }
+  // ✅ Tạo user ngay lập tức (isEmailVerified: false)
+  console.log("✅ Creating user with unverified email");
 
-  // ✅ Không lưu user vào DB, chỉ gửi email xác thực
-  console.log("✅ Email is unique, sending verification email only");
+  // Mã hóa mật khẩu
+  const passwordHash = await bcrypt.hash(password, 10);
+  
+  // Tạo user với isEmailVerified = false
+  const newUser = new User({
+    username,
+    email: email.toLowerCase(),
+    passwordHash,
+    isEmailVerified: false, // ← Chưa xác thực email
+  });
+
+  await newUser.save();
+  console.log("✅ User created in User collection:", newUser.userId);
 
   // Tạo verification code (6 digits)
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút
 
   console.log("📧 Creating verification record with code:", verificationCode);
-  // Lưu verification record (sử dụng email làm identifier)
+  // Lưu verification record
   await EmailVerification.findOneAndUpdate(
     { email: email.toLowerCase() },
     {
@@ -60,9 +65,15 @@ export const registerUserService = async ({
   // Gửi email verification
   await sendVerificationEmail(email, verificationCode);
 
-  console.log("✅ Verification email sent - waiting for email verification");
+  // Tạo tokens để user có thể cập nhật profile trước khi xác thực email
+  const accessToken = generateAccessToken(newUser);
+  const refreshToken = generateRefreshToken(newUser);
+
+  console.log("✅ Verification email sent - user can update profile now");
   return {
-    email,
+    user: newUser,
+    accessToken,
+    refreshToken,
     message: "Verification email sent. Please check your email.",
   };
 };
@@ -71,11 +82,6 @@ export const loginUserService = async ({ email, password, rememberMe }) => {
   const user = await User.findOne({ email }).select("+passwordHash");
   if (!user) {
     throw new Error("Sai email hoặc mật khẩu");
-  }
-
-  // ← NEW: Kiểm tra email verification
-  if (!user.isEmailVerified) {
-    throw new Error("Email chưa được xác nhận. Vui lòng kiểm tra email của bạn.");
   }
 
   const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -92,11 +98,18 @@ export const loginUserService = async ({ email, password, rememberMe }) => {
     ? generateRefreshToken(user, "7d")
     : generateRefreshToken(user, "1d");
 
-  return {
+  const result = {
     user,
     accessToken,
     refreshToken,
   };
+
+  // ⚠️ Thêm warning nếu email chưa xác thực
+  if (!user.isEmailVerified) {
+    result.warning = "Email chưa được xác nhận. Vui lòng kiểm tra email của bạn.";
+  }
+
+  return result;
 };
 
 export const updateUserService = async (userId, userData) => {
@@ -261,38 +274,48 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
 
   console.log("✅ [VERIFY] Code matched!");
 
-  // ✅ If userData is provided, create user (signup flow)
+  // ✅ If userData is provided, create user (signup flow - old flow for backwards compatibility)
   if (userData) {
     console.log("✅ [VERIFY] Creating user from frontend data (signup flow)");
     const { username, password } = userData;
     
-    // Mã hóa mật khẩu
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Kiểm tra user đã tồn tại chưa
+    let existingUser = await User.findOne({ email: email.toLowerCase() });
     
-    // Tạo real user
-    const newUser = new User({
-      username,
-      email: email.toLowerCase(),
-      passwordHash,
-      isEmailVerified: true,
-    });
+    if (!existingUser) {
+      // Mã hóa mật khẩu
+      const passwordHash = await bcrypt.hash(password, 10);
+      
+      // Tạo real user
+      existingUser = new User({
+        username,
+        email: email.toLowerCase(),
+        passwordHash,
+        isEmailVerified: true,
+      });
 
-    await newUser.save();
-    console.log("✅ User created in User collection:", newUser.userId);
+      await existingUser.save();
+      console.log("✅ User created in User collection:", existingUser.userId);
+    } else {
+      // User đã tồn tại, chỉ cập nhật verified status
+      existingUser.isEmailVerified = true;
+      await existingUser.save();
+      console.log("✅ User already exists, updated email verified status");
+    }
 
     // Đánh dấu verification code đã sử dụng
     verificationRecord.isUsed = true;
     await verificationRecord.save();
 
     // Gửi welcome email
-    await sendWelcomeEmail(email, username);
+    await sendWelcomeEmail(email, existingUser.username);
 
-    // Tạo tokens (nhưng không trả về - user phải login)
-    const accessToken = generateAccessToken(newUser);
-    const refreshToken = generateRefreshToken(newUser);
+    // Tạo tokens
+    const accessToken = generateAccessToken(existingUser);
+    const refreshToken = generateRefreshToken(existingUser);
 
     return {
-      user: newUser,
+      user: existingUser,
       accessToken,
       refreshToken,
       message: "Email verified successfully!",
@@ -300,6 +323,14 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
   } else {
     // ✅ If userData is not provided, just verify code (forgot password flow)
     console.log("✅ [VERIFY] Verification code is valid (forgot password flow)");
+    
+    // Cập nhật verified status nếu user đã tồn tại
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser && !existingUser.isEmailVerified) {
+      existingUser.isEmailVerified = true;
+      await existingUser.save();
+      console.log("✅ Email verified for existing user");
+    }
     
     // Đánh dấu verification code đã sử dụng
     verificationRecord.isUsed = true;
@@ -313,10 +344,10 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
 
 // ← NEW: Resend verification code
 export const resendVerificationEmailService = async (email) => {
-  // Tìm pending user
-  const pendingUser = await PendingUser.findOne({ email: email.toLowerCase() });
-  if (!pendingUser) {
-    throw new Error("Email không tồn tại hoặc đã được xác thực");
+  // Tìm user
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user) {
+    throw new Error("Email không tồn tại");
   }
 
   // Tạo verification code mới
@@ -355,11 +386,7 @@ export const forgotPasswordService = async (email) => {
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) {
     console.log("⚠️ Email không tồn tại:", email);
-    // Return generic message cho security (không leak info)
-    return {
-      message: "If email exists, verification code will be sent.",
-      email: email,
-    };
+    throw new Error("Email không tồn tại");
   }
 
   console.log("✅ Email found, generating verification code");
