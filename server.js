@@ -1,5 +1,4 @@
 import express from "express";
-import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import http from "http";
 import { connectDB } from "./utils/features.js";
@@ -30,8 +29,6 @@ dotenv.config({
   path: "./.env",
 });
 
-app.use(bodyParser.json({ limit: "30mb", extended: true }));
-app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -50,7 +47,6 @@ app.use("/api/categories", categoriesRouter);
 app.use("/api/favoriteFoods", favoriteFoodsRouter);
 app.use("/api/foodReviews", foodReviewsRouter);
 app.use("/api/follow", followRouter);
-app.use("/api/ai", aiRouter);
 app.use("/api/ai", aiRouter);
 app.use("/api/notifications", NotificationRouter);
 app.use("/api/payment", paymentRouter);

@@ -350,7 +350,7 @@ export const getFollowingFoodsService = async (userId, page = 1, limit = 10) => 
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
-        
+
         // Tính trung bình rating
         const ratingStats = await FoodRating.aggregate([
           { $match: { foodId: food.foodId } },
@@ -371,19 +371,22 @@ export const getFollowingFoodsService = async (userId, page = 1, limit = 10) => 
         // Đếm số lượng comment
         const commentCount = await getCommentCountService(food.foodId);
 
-        return { 
+        // Trả về shape đồng nhất với các API food khác
+        return {
           foodId: food.foodId,
           foodName: food.foodName,
           foodDescription: food.foodDescription,
           foodThumbnail: food.foodThumbnail,
           foodIngredients: food.foodIngredients,
-          foodInstructions: food.foodInstructions,
+          foodSteps: food.foodSteps,
           categoryId: food.categoryId,
           userId: food.userId,
-          username: user?.username || 'Unknown',
-          avatar: user?.avatar || '',
+          userDetail: {
+            username: user?.username || 'Unknown',
+            avatar: user?.avatar || '',
+          },
           createdAt: food.createdAt,
-          cookingTime: food.CookingTime || '',
+          CookingTime: food.CookingTime || '',
           difficultyLevel: food.difficultyLevel || '',
           servings: food.servings || 0,
           averageRating,
