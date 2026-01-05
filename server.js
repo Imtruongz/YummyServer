@@ -29,8 +29,10 @@ dotenv.config({
   path: "./.env",
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase body size limits to support large JSON payloads (e.g., base64 images)
+const BODY_LIMIT = process.env.BODY_LIMIT || '10mb';
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 
 app.use(securityHeaders);
 // app.use(rateLimiter);
