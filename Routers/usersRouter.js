@@ -13,7 +13,7 @@ UserRouter.post('/resend-verification-email', resendVerificationEmail)
 UserRouter.post('/forgot-password', forgotPassword)
 UserRouter.post('/verify-reset-code', verifyResetCode)
 
-//Done
+
 UserRouter.get('/getAll',authenticateToken,  getAllUser)
 UserRouter.get('/getUserById/:userId',authenticateToken,  getUserById)
 UserRouter.get('/getUserByEmail',authenticateToken,  getUserByEmail)

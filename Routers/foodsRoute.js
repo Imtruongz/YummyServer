@@ -5,14 +5,14 @@ import { authenticateToken } from '../Config/jwtConfig.js';
 
 const foodsRoute = express.Router();
 
-foodsRoute.get('/getAll',authenticateToken,   getAllFood)//DOne
+foodsRoute.get('/getAll',authenticateToken,   getAllFood)
 foodsRoute.get('/search',authenticateToken,  searchFood)//Search foods
 foodsRoute.get('/following',authenticateToken,  getFollowingFoods)//Get foods from following users
-foodsRoute.get('/getDetail/:foodId',authenticateToken,  getDetailFood)//DOne
+foodsRoute.get('/getDetail/:foodId',authenticateToken,  getDetailFood)
 foodsRoute.get('/getFoodsByCategory/:categoryId',authenticateToken,  getFoodByCategory)
 foodsRoute.get('/getFoodByUserId/:userId',authenticateToken,  getFoodByUserId)
-foodsRoute.post('/add',authenticateToken,  addFood)//Done
-foodsRoute.delete('/delete/:foodId',authenticateToken,  deleteFood)//Done
-foodsRoute.put('/update',authenticateToken,  updateFood)//Done
+foodsRoute.post('/add',authenticateToken,  addFood)
+foodsRoute.delete('/delete/:foodId',authenticateToken,  deleteFood)
+foodsRoute.put('/update',authenticateToken,  updateFood)
 
 export default foodsRoute;

@@ -6,7 +6,7 @@ import { authenticateToken } from "../Config/jwtConfig.js";
 const categoriesRouter = express.Router();
 
 
-//Done
+
 categoriesRouter.get("/getAll", authenticateToken,  getAllCategories);
 categoriesRouter.post("/add", authenticateToken,  addCategory);
 
