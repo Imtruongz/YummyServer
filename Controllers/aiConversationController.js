@@ -8,6 +8,7 @@ import {
   cleanupOldConversationsService,
   exportConversationService,
 } from '../Services/aiConversationService.js';
+import { AiConversation } from '../Models/aiConversation.js';
 
 // 1. Lưu conversation mới
 export const saveConversation = async (req, res) => {
@@ -56,7 +57,7 @@ export const addMessage = async (req, res) => {
     }
 
     // Verify conversation belongs to user
-    const conversation = await require('../Models/aiConversation.js').AiConversation.findOne({
+    const conversation = await AiConversation.findOne({
       conversationId,
       userId,
       isDeleted: false,
