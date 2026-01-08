@@ -53,7 +53,7 @@ export const registerUser = async (req, res) => {
       password,
     });
     console.log("✅ [REGISTER] Verification email sent to:", email);
-    res.status(201).json({ 
+    res.status(201).json({
       message: result.message,
       email: result.email
     });
@@ -68,9 +68,9 @@ export const registerUser = async (req, res) => {
       message: err.message,
       stack: err.stack,
     });
-    res.status(500).json({ 
+    res.status(500).json({
       message: "Lỗi máy chủ",
-      error: err.message 
+      error: err.message
     });
   }
 };
@@ -207,13 +207,13 @@ export const loginWithFacebook = async (req, res) => {
   const { userId, username, email, avatar } = req.body;
 
   try {
-    const result = await loginWithFacebookService({ 
-      facebookId: userId, 
-      username, 
-      email, 
-      avatar 
+    const result = await loginWithFacebookService({
+      facebookId: userId,
+      username,
+      email,
+      avatar
     });
-    
+
     res.json({
       message: "Đăng nhập thành công",
       accessToken: result.accessToken,
@@ -231,15 +231,15 @@ export const verifyEmail = async (req, res) => {
   const { email, verificationCode, userData } = req.body;
 
   if (!email || !verificationCode) {
-    return res.status(400).json({ 
-      message: "Email và mã xác nhận là bắt buộc" 
+    return res.status(400).json({
+      message: "Email và mã xác nhận là bắt buộc"
     });
   }
 
   // userData is optional (can be used for signup flow only)
   if (userData && (!userData.username || !userData.password)) {
-    return res.status(400).json({ 
-      message: "Form data (username, password) không hợp lệ" 
+    return res.status(400).json({
+      message: "Form data (username, password) không hợp lệ"
     });
   }
 
@@ -247,7 +247,7 @@ export const verifyEmail = async (req, res) => {
     // ✅ If userData is provided, create user (signup flow)
     // ✅ If userData is not provided, just verify code (forgot password flow)
     const result = await verifyEmailService(email, verificationCode, userData);
-    
+
     if (userData) {
       // Signup flow - return user + tokens
       res.json({
