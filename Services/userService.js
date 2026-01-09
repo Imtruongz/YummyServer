@@ -17,7 +17,7 @@ export const registerUserService = async ({
   fullName,
 }) => {
   console.log("🔧 [SERVICE] registerUserService started");
-  
+
   // Kiểm tra trùng email trong User
   console.log("🔍 Checking if email exists in User collection:", email);
   const existingUserByEmail = await User.findOne({ email });
@@ -31,7 +31,7 @@ export const registerUserService = async ({
 
   // Mã hóa mật khẩu
   const passwordHash = await bcrypt.hash(password, 10);
-  
+
   // Tạo user với isEmailVerified = false
   const newUser = new User({
     username,
@@ -181,6 +181,49 @@ export const getAllUsersService = async (currentUserId) => {
   }
 };
 
+/**
+ * Get Popular Creators
+ * Returns all users sorted by followers count (including those with 0 followers)
+ * @param {string} currentUserId - Current user ID to exclude
+ * @param {number} limit - Number of creators to return (default: 10)
+ * @returns {Array} List of creators sorted by follower count (descending)
+ */
+export const getPopularCreatorsService = async (currentUserId, limit = 10) => {
+  try {
+    const { UserFollow } = await import("../Models/userFollows.js");
+
+    // Get all users except current user
+    const users = await User.find({ userId: { $ne: currentUserId } })
+      .select("userId username avatar description createdAt")
+      .lean();
+
+    // Enrich users with follower count
+    const enrichedUsers = await Promise.all(
+      users.map(async (user) => {
+        // Count followers
+        const followerCount = await UserFollow.countDocuments({
+          followingId: user.userId
+        });
+
+        return {
+          ...user,
+          followerCount,
+        };
+      })
+    );
+
+    // Sort by follower count (descending) - show all users, even with 0 followers
+    const popularCreators = enrichedUsers
+      .sort((a, b) => b.followerCount - a.followerCount)
+      .slice(0, limit);
+
+    return popularCreators;
+  } catch (error) {
+    console.log("Lỗi khi lấy popular creators:", error);
+    throw new Error("Lỗi khi truy vấn dữ liệu từ database");
+  }
+};
+
 export const getUserByIdService = async (userId) => {
   try {
     return await User.findOne({ userId });
@@ -204,7 +247,7 @@ export const loginWithFacebookService = async ({ facebookId, username, email, av
     // Kiểm tra nếu email đã tồn tại
     user = await User.findOne({ email });
   }
-  
+
   if (!user) {
     // Tạo người dùng mới
     user = new User({
@@ -220,11 +263,11 @@ export const loginWithFacebookService = async ({ facebookId, username, email, av
     user.facebookId = facebookId;
     await user.save();
   }
-  
+
   // Tạo token
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
-  
+
   return {
     user,
     accessToken,
@@ -237,7 +280,7 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
   console.log("🔍 [VERIFY] Starting verification for email:", email);
   console.log("🔍 [VERIFY] Code received (type:", typeof verificationCode, "):", verificationCode);
   console.log("🔍 [VERIFY] userData provided:", userData ? 'YES' : 'NO');
-  
+
   // Tìm verification record
   const verificationRecord = await EmailVerification.findOne({
     email: email.toLowerCase(),
@@ -245,7 +288,7 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
   });
 
   console.log("🔍 [VERIFY] Record found:", verificationRecord ? 'YES' : 'NO');
-  
+
   if (!verificationRecord) {
     throw new Error("Mã xác nhận không tồn tại hoặc đã hết hạn");
   }
@@ -278,14 +321,14 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
   if (userData) {
     console.log("✅ [VERIFY] Creating user from frontend data (signup flow)");
     const { username, password } = userData;
-    
+
     // Kiểm tra user đã tồn tại chưa
     let existingUser = await User.findOne({ email: email.toLowerCase() });
-    
+
     if (!existingUser) {
       // Mã hóa mật khẩu
       const passwordHash = await bcrypt.hash(password, 10);
-      
+
       // Tạo real user
       existingUser = new User({
         username,
@@ -323,7 +366,7 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
   } else {
     // ✅ If userData is not provided, just verify code (forgot password flow)
     console.log("✅ [VERIFY] Verification code is valid (forgot password flow)");
-    
+
     // Cập nhật verified status nếu user đã tồn tại
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser && !existingUser.isEmailVerified) {
@@ -331,7 +374,7 @@ export const verifyEmailService = async (email, verificationCode, userData) => {
       await existingUser.save();
       console.log("✅ Email verified for existing user");
     }
-    
+
     // Đánh dấu verification code đã sử dụng
     verificationRecord.isUsed = true;
     await verificationRecord.save();

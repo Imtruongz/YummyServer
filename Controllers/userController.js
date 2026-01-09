@@ -7,6 +7,7 @@ import {
   getUserByEmailService,
   changePasswordService,
   getAllUsersService,
+  getPopularCreatorsService,
   loginWithFacebookService,
   verifyEmailService,
   resendVerificationEmailService,
@@ -168,6 +169,23 @@ export const getAllUser = async (req, res) => {
     res.json(users);
   } catch (err) {
     console.log("Lỗi khi lấy danh sách người dùng:", err);
+    res.status(500).json({ message: "Lỗi máy chủ" });
+  }
+};
+
+/**
+ * GET /users/popular-creators
+ * Get popular creators sorted by followers and food count
+ */
+export const getPopularCreators = async (req, res) => {
+  const userId = req.user.userId;
+  const limit = parseInt(req.query.limit) || 10; // Default 10 creators
+
+  try {
+    const creators = await getPopularCreatorsService(userId, limit);
+    res.json(creators);
+  } catch (err) {
+    console.log("Lỗi khi lấy popular creators:", err);
     res.status(500).json({ message: "Lỗi máy chủ" });
   }
 };
