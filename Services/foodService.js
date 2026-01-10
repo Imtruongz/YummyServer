@@ -17,22 +17,22 @@ import { getCommentCountService } from "./reviewService.js";
 export const getAllFoodService = async (page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit;
-    
+
     // Lấy tổng số lượng food
     const total = await Food.countDocuments();
-    
+
     // Lấy food với pagination, sắp xếp theo ngày tạo (mới nhất trước)
     const foods = await Food.find()
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    
+
     const fullFoods = await Promise.all(
       foods.map(async (food) => {
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
-        
+
         // Tính trung bình rating
         const ratingStats = await FoodRating.aggregate([
           { $match: { foodId: food.foodId } },
@@ -50,15 +50,15 @@ export const getAllFoodService = async (page = 1, limit = 10) => {
           : 0;
         const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
 
-        return { 
-          ...food.toObject(), 
+        return {
+          ...food.toObject(),
           userDetail: user ? user.toObject() : {},
           averageRating,
           totalRatings,
         };
       })
     );
-    
+
     return {
       data: fullFoods,
       pagination: {
@@ -77,27 +77,27 @@ export const getAllFoodService = async (page = 1, limit = 10) => {
 export const searchFoodService = async (query = '', page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit;
-    
+
     // Tạo regex để search
     const searchRegex = new RegExp(query, 'i');
-    
+
     // Tìm foods khớp với query (chỉ foodName)
     const total = await Food.countDocuments({
       foodName: searchRegex
     });
-    
+
     const foods = await Food.find({
       foodName: searchRegex
     })
       .skip(skip)
       .limit(limit);
-    
+
     const fullFoods = await Promise.all(
       foods.map(async (food) => {
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
-        
+
         // Tính trung bình rating
         const ratingStats = await FoodRating.aggregate([
           { $match: { foodId: food.foodId } },
@@ -115,15 +115,15 @@ export const searchFoodService = async (query = '', page = 1, limit = 10) => {
           : 0;
         const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
 
-        return { 
-          ...food.toObject(), 
+        return {
+          ...food.toObject(),
           userDetail: user ? user.toObject() : {},
           averageRating,
           totalRatings,
         };
       })
     );
-    
+
     return {
       data: fullFoods,
       pagination: {
@@ -196,7 +196,7 @@ export const getFoodByCategoryService = async (categoryId) => {
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
-        
+
         // Tính trung bình rating
         const ratingStats = await FoodRating.aggregate([
           { $match: { foodId: food.foodId } },
@@ -236,7 +236,7 @@ export const getFoodByUserIdService = async (userId) => {
         const user = await User.findOne({ userId: food.userId }).select(
           "username avatar"
         );
-        
+
         // Tính trung bình rating
         const ratingStats = await FoodRating.aggregate([
           { $match: { foodId: food.foodId } },
@@ -293,7 +293,7 @@ export const updateFoodService = async (foodId, userId, fooData) => {
     if (!food) {
       throw new Error("Food not found");
     }
-    
+
     // Check ownership - only food owner can edit
     if (food.userId !== userId) {
       throw new Error("You can only edit your own food");
@@ -304,12 +304,46 @@ export const updateFoodService = async (foodId, userId, fooData) => {
       updatedAt: new Date(),
     };
 
-    const updateFood = await Food.findOneAndUpdate(
+    const updatedFood = await Food.findOneAndUpdate(
       { foodId: foodId },
       foodData,
       { new: true }
     );
-    return updateFood;
+
+    // Populate userDetail, categoryDetail, and rating data (consistent with getDetailFoodService)
+    const user = await User.findOne({ userId: updatedFood.userId }).select(
+      "username email avatar"
+    );
+
+    const category = await Category.findOne({ categoryId: updatedFood.categoryId }).select(
+      "categoryId categoryName"
+    );
+
+    // Calculate average rating
+    const ratingStats = await FoodRating.aggregate([
+      { $match: { foodId: foodId } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: "$rating" },
+          totalRatings: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating = ratingStats.length > 0
+      ? Math.round(ratingStats[0].averageRating * 10) / 10
+      : 0;
+    const totalRatings = ratingStats.length > 0 ? ratingStats[0].totalRatings : 0;
+
+    // Return full food data with details
+    return {
+      ...updatedFood.toObject(),
+      userDetail: user ? user.toObject() : {},
+      categoryDetail: category ? category.toObject() : null,
+      averageRating,
+      totalRatings,
+    };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -318,11 +352,11 @@ export const updateFoodService = async (foodId, userId, fooData) => {
 export const getFollowingFoodsService = async (userId, page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit;
-    
+
     // Lấy danh sách những người mà user này follow
     const following = await UserFollow.find({ followerId: userId }).select('followingId');
     const followingIds = following.map(f => f.followingId);
-    
+
     // Nếu không follow ai, trả về empty
     if (followingIds.length === 0) {
       return {
@@ -335,16 +369,16 @@ export const getFollowingFoodsService = async (userId, page = 1, limit = 10) => 
         },
       };
     }
-    
+
     // Lấy tổng số foods từ những người follow
     const total = await Food.countDocuments({ userId: { $in: followingIds } });
-    
+
     // Lấy foods từ những người follow, sắp xếp theo mới nhất
     const foods = await Food.find({ userId: { $in: followingIds } })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    
+
     const fullFoods = await Promise.all(
       foods.map(async (food) => {
         const user = await User.findOne({ userId: food.userId }).select(
@@ -395,7 +429,7 @@ export const getFollowingFoodsService = async (userId, page = 1, limit = 10) => 
         };
       })
     );
-    
+
     return {
       data: fullFoods,
       pagination: {
