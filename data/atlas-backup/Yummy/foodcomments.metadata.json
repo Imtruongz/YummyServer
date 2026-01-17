@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"commentId":{"$numberInt":"1"}},"name":"commentId_1","background":true,"unique":true}],"uuid":"4a285909bee04f4885111d3088e2ae37","collectionName":"foodcomments","type":"collection"}

@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"favoriteFoodId":{"$numberInt":"1"}},"name":"favoriteFoodId_1","background":true,"unique":true}],"uuid":"d4ee1f8cb7e84cc69c7cb494a9b31b50","collectionName":"favoritefoods","type":"collection"}

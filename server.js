@@ -23,6 +23,7 @@ import paymentRouter from "./Routers/paymentRouter.js";
 import bankAccountRouter from "./Routers/bankAccountRouter.js";
 import ratingRouter from "./Routers/ratingRouter.js";
 import aiConversationRouter from "./Routers/aiConversationRouter.js";
+import uploadRouter from "./Routers/uploadRouter.js";
 
 const app = express();
 dotenv.config({
@@ -55,6 +56,7 @@ app.use("/api/payment", paymentRouter);
 app.use("/api/bank-accounts", bankAccountRouter);
 app.use("/api/ratings", ratingRouter);
 app.use("/api/ai/conversations", aiConversationRouter);
+app.use("/api/upload", uploadRouter);
 
 //Listen to all IP addresse
 const server = http.createServer(app);
