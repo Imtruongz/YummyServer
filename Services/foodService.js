@@ -4,6 +4,7 @@ import { FoodRating } from "../Models/foodRatings.js";
 import { Category } from "../Models/categories.js";
 import { UserFollow } from "../Models/userFollows.js";
 import { getCommentCountService } from "./reviewService.js";
+import { processFoodThumbnail } from "../utils/imageUpload.js";
 
 // export const getAllFoodService = async () => {
 //   try {
@@ -270,6 +271,11 @@ export const getFoodByUserIdService = async (userId) => {
 
 export const addFoodService = async (food) => {
   try {
+    // Auto-upload base64 thumbnail to Cloudinary
+    if (food.foodThumbnail) {
+      food.foodThumbnail = await processFoodThumbnail(food.foodThumbnail);
+    }
+
     const newFood = await Food.create(food);
     return newFood;
   } catch (error) {
@@ -297,6 +303,11 @@ export const updateFoodService = async (foodId, userId, fooData) => {
     // Check ownership - only food owner can edit
     if (food.userId !== userId) {
       throw new Error("You can only edit your own food");
+    }
+
+    // Auto-upload base64 thumbnail to Cloudinary
+    if (fooData.foodThumbnail) {
+      fooData.foodThumbnail = await processFoodThumbnail(fooData.foodThumbnail);
     }
 
     const foodData = {

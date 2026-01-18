@@ -9,6 +9,7 @@ import {
   sendVerificationEmail,
   sendWelcomeEmail,
 } from "./emailService.js";
+import { processUserAvatar } from "../utils/imageUpload.js";
 
 export const registerUserService = async ({
   username,
@@ -113,6 +114,11 @@ export const loginUserService = async ({ email, password, rememberMe }) => {
 };
 
 export const updateUserService = async (userId, userData) => {
+  // Auto-upload base64 avatar to Cloudinary
+  if (userData.avatar) {
+    userData.avatar = await processUserAvatar(userData.avatar);
+  }
+
   const updateData = {
     ...userData,
     updatedAt: Date.now(),
