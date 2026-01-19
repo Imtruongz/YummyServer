@@ -460,6 +460,8 @@ export const forgotPasswordService = async (email) => {
       verificationCode,
       expiresAt,
       createdAt: new Date(),
+      isUsed: false,  // ← FIXED: Reset isUsed để query có thể tìm thấy record
+      attempts: 0,    // ← FIXED: Reset số lần thử
     },
     { upsert: true, new: true }
   );
