@@ -18,4 +18,8 @@ paymentRouter.post("/callback", paymentCallback);
 // ✨ Route để cập nhật trạng thái (backward compatibility)
 paymentRouter.post("/update-status", updatePaymentStatus);
 
+// ✨ Route để Client đăng ký transaction cần theo dõi (Polling)
+import { registerTransaction } from "../Controllers/paymentController.js";
+paymentRouter.post("/register-transaction", registerTransaction);
+
 export default paymentRouter;
