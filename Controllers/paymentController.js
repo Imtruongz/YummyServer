@@ -290,7 +290,8 @@ export const updatePaymentStatus = paymentCallback;
 import axios from 'axios';
 
 const MBLAOS_CONFIG = {
-  baseUrl: 'http://qa-mb-laos-gateway-api.evotek.vn/api/gateway/v1',
+  // baseUrl: 'http://qa-mb-laos-gateway-api.evotek.vn/api/gateway/v1',
+  baseUrl: 'https://uat-inapiapplao.mbbank.com.vn:8443/api/gateway/v1',
   username: 'lottery',
   password: 'ekboh8rKhEQmN5RC/WlHpRksFomWI0zfhQXcQw/yt28vjDmPV3sWZsBCBR3gf6LjkROuX4hDLM803EEty+OZXAzwIAz5XK1FR0bQm0yH7wHbP5zPUec/5GAAkgEvgX/P4z1/OYw2Ec0ng6pwpuDlwtWRyP4AMlO4L2/tVS3pVh6Hk26gtr5HiEvGVQaX7L4m8OlqBQHk6PqLZ7pre2e2Gerlu1LU3gPAyQ8Ej3JHrImn1dPTZc/+x4wGYXcN41fce3iXwKqVCShoW7peHKXtcoPAebU8DSUQNk3M6AF22+4t9gnuqwhgB9FVdgSS6OSoVArhPRFk49VV0CGUvyTy+g=='
 };
